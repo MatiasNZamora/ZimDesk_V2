@@ -13,13 +13,25 @@ function daysAgo(n: number, offsetHours = 0): Date {
 async function main() {
   console.log('🌱 Iniciando seed de demo ZimDesk v2...')
 
+  // ─── ESTRUCTURAS (EMPRESAS) ───────────────────────────────────
+  const zimtech = await prisma.estructura.upsert({
+    where: { id: 1 },
+    update: { name: 'ZimTech Interna' },
+    create: { id: 1, name: 'ZimTech Interna' },
+  })
+  const empresa2 = await prisma.estructura.upsert({
+    where: { id: 2 },
+    update: { name: 'Empresa Demo SA' },
+    create: { id: 2, name: 'Empresa Demo SA' },
+  })
+
   // ─── DEPARTAMENTOS ────────────────────────────────────────────
   const deps = await Promise.all([
-    prisma.department.upsert({ where: { id: 1 }, update: { name: 'IT & Sistemas' },    create: { name: 'IT & Sistemas' } }),
-    prisma.department.upsert({ where: { id: 2 }, update: { name: 'Recursos Humanos' }, create: { name: 'Recursos Humanos' } }),
-    prisma.department.upsert({ where: { id: 3 }, update: { name: 'Operaciones' },      create: { name: 'Operaciones' } }),
-    prisma.department.upsert({ where: { id: 4 }, update: { name: 'Finanzas' },         create: { name: 'Finanzas' } }),
-    prisma.department.upsert({ where: { id: 5 }, update: { name: 'Marketing' },        create: { name: 'Marketing' } }),
+    prisma.department.upsert({ where: { id: 1 }, update: { name: 'IT & Sistemas',    estructuraId: zimtech.id  }, create: { name: 'IT & Sistemas',    estructuraId: zimtech.id  } }),
+    prisma.department.upsert({ where: { id: 2 }, update: { name: 'Recursos Humanos', estructuraId: zimtech.id  }, create: { name: 'Recursos Humanos', estructuraId: zimtech.id  } }),
+    prisma.department.upsert({ where: { id: 3 }, update: { name: 'Operaciones',      estructuraId: empresa2.id }, create: { name: 'Operaciones',      estructuraId: empresa2.id } }),
+    prisma.department.upsert({ where: { id: 4 }, update: { name: 'Finanzas',         estructuraId: empresa2.id }, create: { name: 'Finanzas',         estructuraId: empresa2.id } }),
+    prisma.department.upsert({ where: { id: 5 }, update: { name: 'Marketing',        estructuraId: empresa2.id }, create: { name: 'Marketing',        estructuraId: empresa2.id } }),
   ])
   const [itDep, hrDep, opsDep, finDep, mktDep] = deps
 
@@ -200,8 +212,24 @@ async function main() {
     return ticket
   }
 
+  async function adjuntar(ticketId: number, archivos: { name: string; type: string; size: number }[]) {
+    const existing = await prisma.attachmentTicket.count({ where: { ticketId } })
+    if (existing > 0) return
+    for (const a of archivos) {
+      await prisma.attachmentTicket.create({
+        data: {
+          ticketId,
+          filePath: `/uploads/tickets/demo/${a.name}`,
+          fileType: a.type,
+          fileName: a.name,
+          fileSize: a.size,
+        },
+      })
+    }
+  }
+
   // ── TICKETS ABIERTOS (sin asignar) ──────────────────────────
-  await crearTicket({
+  const ticketVpn = await crearTicket({
     userId: cliente1.id,
     subject: 'No puedo acceder a la VPN corporativa desde casa',
     description: 'Desde ayer a las 18hs no logro conectarme a la VPN. El cliente Cisco AnyConnect muestra el error "Connection attempt has failed due to server communication errors". Ya reinicié el equipo y desinstalé/reinstalé el cliente pero el problema persiste.\n\nSistema operativo: Windows 11 Pro 23H2\nVersión AnyConnect: 4.10.08029',
@@ -235,7 +263,7 @@ async function main() {
   })
 
   // ── TICKETS EN PROGRESO ──────────────────────────────────────
-  await crearTicket({
+  const ticketFactura = await crearTicket({
     userId: cliente3.id,
     subject: 'Error en factura #F-2026-0482 — monto incorrecto',
     description: 'La factura F-2026-0482 emitida el 15 de junio tiene un monto de $125.000 pero debería ser $112.500 según el contrato vigente. La diferencia es de $12.500.\n\nAdjunto el contrato y la factura para su revisión. Necesito que se emita una nota de crédito antes del cierre del mes para poder cuadrar la contabilidad.',
@@ -264,7 +292,7 @@ async function main() {
     ],
   })
 
-  await crearTicket({
+  const ticketEmail = await crearTicket({
     userId: cliente4.id,
     subject: 'Campaña de email no se envió correctamente — 0% de apertura',
     description: 'Lanzamos ayer la campaña "Promo Julio 2026" desde Mailchimp y según las métricas tenemos 0% de tasa de apertura en 1.200 envíos. Lo raro es que los envíos de prueba sí llegaron a nuestras casillas internas.\n\nSospechamos que los emails están cayendo en spam o hay un problema con el dominio de envío. Necesitamos resolverlo urgente porque la promo vence el domingo.',
@@ -289,7 +317,7 @@ async function main() {
   })
 
   // ── TICKETS EN ESPERA DEL CLIENTE ────────────────────────────
-  await crearTicket({
+  const ticketExcel = await crearTicket({
     userId: cliente1.id,
     subject: 'Excel no abre archivos .xlsx — error de formato',
     description: 'Desde que actualizaron el Office (versión 2406) no puedo abrir ningún archivo .xlsx. El error dice "Excel no puede abrir el archivo porque el formato o la extensión no son válidos".\n\nProbé con varios archivos que antes abrían sin problema y todos fallan. Los archivos .xls (formato viejo) sí abren correctamente.',
@@ -337,7 +365,7 @@ async function main() {
     ],
   })
 
-  await crearTicket({
+  const ticketReembolso = await crearTicket({
     userId: cliente3.id,
     subject: 'Consulta sobre política de reembolso — servicio cancelado',
     description: '¿Cuál es el proceso para solicitar el reembolso del servicio de licencias #LIC-789 que cancelamos el mes pasado? El cargo aún aparece en nuestra cuenta. Necesito los formularios y los plazos estimados.',
@@ -362,7 +390,7 @@ async function main() {
   })
 
   // ── TICKET CON RESPUESTA DEL CLIENTE ─────────────────────────
-  await crearTicket({
+  const ticketAnalytics = await crearTicket({
     userId: cliente4.id,
     subject: 'Acceso al panel de Google Analytics bloqueado',
     description: 'Desde hace 2 días no puedo acceder a Google Analytics con mi cuenta corporativa lucia.fernandez@zimtech.com.ar. El error es "No tenés permiso para ver esta propiedad".\n\nNecesito acceso a la propiedad GA4-2891-XXX para generar el informe mensual de Marketing.',
@@ -489,7 +517,7 @@ async function main() {
   })
 
   // ── TICKETS RESUELTOS ─────────────────────────────────────────
-  await crearTicket({
+  const ticketDoblecobro = await crearTicket({
     userId: cliente3.id,
     subject: 'Doble cobro en factura de junio — línea de servicio cloud',
     description: 'En la factura de junio aparecen dos cargos por el servicio Cloud Storage Pro: uno de $45.000 el día 3 y otro de $45.000 el día 5. Solo deberíamos tener un cargo mensual. Por favor verificar y emitir nota de crédito.',
@@ -552,7 +580,7 @@ async function main() {
   })
 
   // ── TICKET REABIERTO ──────────────────────────────────────────
-  await crearTicket({
+  const ticketTeams = await crearTicket({
     userId: cliente1.id,
     subject: 'Teams no carga el historial de chats — segunda vez',
     description: 'El problema del historial de Teams volvió a ocurrir. Ya lo habían "solucionado" hace 2 semanas pero desde esta mañana el historial aparece vacío nuevamente.\n\nLo reabro porque el fix anterior no fue permanente.',
@@ -590,6 +618,34 @@ async function main() {
       { userId: admin.id, action: 'Matías Zamora canceló el ticket (ticket duplicado, se gestionó por canal interno).', createdAt: daysAgo(5, 3) },
     ],
   })
+
+  // ── ADJUNTOS DE DEMO ────────────────────────────────────────
+  await adjuntar(ticketVpn.id, [
+    { name: 'captura-error-vpn.png', type: 'image/png', size: 284210 },
+  ])
+  await adjuntar(ticketFactura.id, [
+    { name: 'factura-F-2026-0482.pdf',    type: 'application/pdf', size: 215040 },
+    { name: 'contrato-CONT-2025-089.pdf', type: 'application/pdf', size: 189440 },
+  ])
+  await adjuntar(ticketEmail.id, [
+    { name: 'captura-mailchimp-stats.png',    type: 'image/png', size: 512000 },
+    { name: 'reporte-apertura-emails.xlsx',   type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', size: 98304 },
+  ])
+  await adjuntar(ticketExcel.id, [
+    { name: 'captura-excel-error.png', type: 'image/png', size: 345600 },
+  ])
+  await adjuntar(ticketReembolso.id, [
+    { name: 'formulario-reembolso-FR014.docx', type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', size: 73728 },
+  ])
+  await adjuntar(ticketAnalytics.id, [
+    { name: 'captura-analytics-error.png', type: 'image/png', size: 423936 },
+  ])
+  await adjuntar(ticketDoblecobro.id, [
+    { name: 'nota-credito-NC-2026-0134.pdf', type: 'application/pdf', size: 102400 },
+  ])
+  await adjuntar(ticketTeams.id, [
+    { name: 'captura-teams-historial.png', type: 'image/png', size: 298496 },
+  ])
 
   console.log('✅ Tickets de demo creados')
   console.log('')

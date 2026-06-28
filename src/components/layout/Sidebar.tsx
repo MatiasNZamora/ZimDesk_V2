@@ -26,6 +26,7 @@ const navItems: NavItem[] = [
   { href: '/tickets?view=gestion',   label: 'Gestionar Tickets',    icon: Settings,        roles: ['admin'], section: 'Gestión' },
   { href: '/tickets?view=conformidad',label: 'Conformidad',         icon: CheckSquare,     roles: ['admin'] },
   { href: '/users',                  label: 'Usuarios',             icon: Users,           roles: ['admin'], section: 'Mantenimiento' },
+  { href: '/estructuras',            label: 'Estructuras',          icon: Building2,       roles: ['admin'] },
   { href: '/departments',            label: 'Departamentos',        icon: Building2,       roles: ['admin'] },
   { href: '/categories',             label: 'Categorías',           icon: Tag,             roles: ['admin'] },
   { href: '/faqs',                   label: 'FAQs',                 icon: HelpCircle,      roles: ['admin'] },

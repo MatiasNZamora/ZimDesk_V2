@@ -10,7 +10,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const ticket = await prisma.ticket.findUnique({
     where: { id: Number(params.id) },
     include: {
-      creator: { include: { department: true } },
+      creator: { include: { department: { include: { estructura: true } } } },
       agent: { select: { id: true, name: true, email: true, avatar: true } },
       status: true,
       priority: true,

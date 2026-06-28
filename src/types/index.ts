@@ -38,7 +38,7 @@ export interface TicketWithRelations {
   slaAlertedAt: Date | null
   createdAt: Date
   updatedAt: Date
-  creator: { id: number; name: string; email: string; department: { name: string } }
+  creator: { id: number; name: string; email: string; department: { name: string; estructura: { id: number; name: string } | null } | null }
   agent: { id: number; name: string; email: string } | null
   status: { id: number; name: string; slug: string }
   priority: { id: number; name: string; color: string; slug: string }

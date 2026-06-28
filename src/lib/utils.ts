@@ -24,6 +24,7 @@ export function formatMinutes(minutes: number): string {
 
 export const STATUS_STYLES: Record<string, { label: string; color: string; bg: string }> = {
   abierto:           { label: 'Abierto',                color: 'text-amber-700',  bg: 'bg-amber-100' },
+  en_proceso:        { label: 'En Proceso',             color: 'text-blue-700',   bg: 'bg-blue-100' },
   en_progreso:       { label: 'En Progreso',            color: 'text-blue-700',   bg: 'bg-blue-100' },
   en_espera_cliente: { label: 'En Espera del Cliente',  color: 'text-cyan-700',   bg: 'bg-cyan-100' },
   respuesta_cliente: { label: 'Respuesta del Cliente',  color: 'text-indigo-700', bg: 'bg-indigo-100' },

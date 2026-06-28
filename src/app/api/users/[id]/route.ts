@@ -39,6 +39,24 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   return NextResponse.json(user)
 }
 
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions)
+  if (!session || session.user.role !== 'admin') {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+  const targetId = Number(params.id)
+  if (targetId === Number(session.user.id)) {
+    return NextResponse.json({ error: 'No podés desactivarte a vos mismo' }, { status: 400 })
+  }
+  const { active } = await req.json()
+  const user = await prisma.user.update({
+    where: { id: targetId },
+    data: { active: Boolean(active), tokenVersion: { increment: active ? 0 : 1 } },
+    select: { id: true, active: true },
+  })
+  return NextResponse.json(user)
+}
+
 export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'admin') {

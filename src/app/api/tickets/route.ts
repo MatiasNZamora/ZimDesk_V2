@@ -27,8 +27,9 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const page      = Number(searchParams.get('page')     ?? 1)
   const perPage   = Number(searchParams.get('perPage')  ?? 25)
-  const statusId  = searchParams.get('statusId')
-  const priorityId = searchParams.get('priorityId')
+  const statusId    = searchParams.get('statusId')
+  const statusGroup = searchParams.get('statusGroup')
+  const priorityId  = searchParams.get('priorityId')
   const search    = searchParams.get('search') ?? ''
   const view      = searchParams.get('view')   ?? 'mine'
   const userId    = Number(session.user.id)
@@ -44,7 +45,8 @@ export async function GET(req: NextRequest) {
     where.status = { slug: { in: ['resuelto', 'cerrado'] } }
   }
 
-  if (statusId)   where.statusId   = Number(statusId)
+  if (statusGroup === 'en_proceso') where.statusId = { in: [2, 3, 4] }
+  else if (statusId) where.statusId = Number(statusId)
   if (priorityId) where.priorityId = Number(priorityId)
   if (search) {
     const orConditions: object[] = [{ subject: { contains: search, mode: 'insensitive' } }]
@@ -56,7 +58,7 @@ export async function GET(req: NextRequest) {
     prisma.ticket.findMany({
       where,
       include: {
-        creator:  { include: { department: true } },
+        creator:  { include: { department: { include: { estructura: true } } } },
         agent:    { select: { id: true, name: true, email: true } },
         status:   true,
         priority: true,
