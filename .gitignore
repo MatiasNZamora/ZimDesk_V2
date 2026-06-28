@@ -1,0 +1,8 @@
+.env
+.env.local
+.next/
+node_modules/
+public/uploads/
+*.log
+.DS_Store
+prisma/migrations/

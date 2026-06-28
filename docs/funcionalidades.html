@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZimDesk v2 — Funcionalidades y Resumen de Cambios</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-deep:    #002327;
+      --bg-card:    #00313b;
+      --bg-section: #003d47;
+      --accent:     #039FB3;
+      --accent-dim: #027b8c;
+      --accent-glow:#039FB340;
+      --text-main:  #e2f4f7;
+      --text-muted: #7ab8c4;
+      --text-dim:   #4d8a96;
+      --border:     #0a4a56;
+      --red:        #ef4444;
+      --red-dim:    #7f1d1d;
+      --green:      #10b981;
+      --green-dim:  #064e3b;
+      --amber:      #f59e0b;
+      --amber-dim:  #451a03;
+      --white:      #ffffff;
+    }
+
+    body {
+      background: var(--bg-deep);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Header ───────────────────────────────────── */
+    header {
+      background: linear-gradient(135deg, #001a1e 0%, #003340 50%, #00272e 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 0 48px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+    .header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 72px;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo-mark {
+      width: 40px; height: 40px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 800; color: var(--white);
+      letter-spacing: -1px;
+    }
+    .logo-text { font-size: 20px; font-weight: 700; color: var(--white); }
+    .logo-version {
+      font-size: 11px;
+      background: var(--accent-glow);
+      color: var(--accent);
+      padding: 2px 8px;
+      border-radius: 20px;
+      border: 1px solid var(--accent-dim);
+      font-weight: 600;
+    }
+    .header-meta {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* ── Hero ─────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(160deg, #002f38 0%, #001f24 60%);
+      border-bottom: 1px solid var(--border);
+      padding: 64px 48px;
+      text-align: center;
+    }
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent-glow);
+      color: var(--accent);
+      border: 1px solid var(--accent-dim);
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-size: clamp(28px, 5vw, 46px);
+      font-weight: 800;
+      color: var(--white);
+      letter-spacing: -1px;
+      margin-bottom: 16px;
+    }
+    .hero h1 span { color: var(--accent); }
+    .hero p {
+      font-size: 16px;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto 32px;
+    }
+    .hero-stats {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      flex-wrap: wrap;
+      margin-top: 32px;
+    }
+    .hero-stat { text-align: center; }
+    .hero-stat .num {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--accent);
+      display: block;
+    }
+    .hero-stat .lbl {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    /* ── Layout ───────────────────────────────────── */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 48px 80px;
+    }
+
+    /* ── Section header ───────────────────────────── */
+    .section-header {
+      margin: 64px 0 28px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .section-dot {
+      width: 10px; height: 10px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 12px var(--accent);
+      flex-shrink: 0;
+    }
+    .section-header h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--white);
+    }
+    .section-header .section-sub {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    /* ── Cards ────────────────────────────────────── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    .cards-grid.full { grid-template-columns: 1fr; }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .card:hover {
+      border-color: var(--accent-dim);
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .card-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .icon-accent  { background: var(--accent-glow); color: var(--accent); }
+    .icon-red     { background: rgba(239,68,68,.15); color: var(--red); }
+    .icon-green   { background: rgba(16,185,129,.15); color: var(--green); }
+    .icon-amber   { background: rgba(245,158,11,.15); color: var(--amber); }
+    .icon-indigo  { background: rgba(99,102,241,.15); color: #818cf8; }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 2px;
+    }
+    .card-route {
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      color: var(--accent);
+      background: var(--accent-glow);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+    .card-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.65;
+      margin-bottom: 14px;
+    }
+    .card-features {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .card-features li {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .card-features li::before {
+      content: '→';
+      color: var(--accent);
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ── Bug fixes table ──────────────────────────── */
+    .fix-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .fix-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 16px;
+      align-items: start;
+      transition: border-color .2s;
+    }
+    .fix-item:hover { border-color: var(--accent-dim); }
+    .fix-badge {
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .badge-critical { background: rgba(239,68,68,.18); color: var(--red); border: 1px solid rgba(239,68,68,.3); }
+    .badge-bug      { background: rgba(245,158,11,.18); color: var(--amber); border: 1px solid rgba(245,158,11,.3); }
+    .badge-debt     { background: rgba(99,102,241,.18); color: #a5b4fc; border: 1px solid rgba(99,102,241,.3); }
+    .badge-improve  { background: rgba(16,185,129,.18); color: var(--green); border: 1px solid rgba(16,185,129,.3); }
+
+    .fix-content .fix-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--white);
+      margin-bottom: 4px;
+    }
+    .fix-content .fix-desc {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .fix-content .fix-file {
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      color: var(--text-dim);
+      margin-top: 5px;
+    }
+
+    /* ── Stack table ──────────────────────────────── */
+    .stack-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--bg-card);
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .stack-table th {
+      background: var(--bg-section);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      padding: 12px 20px;
+      text-align: left;
+    }
+    .stack-table td {
+      padding: 12px 20px;
+      font-size: 13px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+    }
+    .stack-table tr:hover td { background: rgba(3,159,179,.04); }
+    .stack-table td:first-child { color: var(--white); font-weight: 600; }
+    .stack-table td code {
+      font-family: 'Courier New', monospace;
+      font-size: 11.5px;
+      color: var(--accent);
+      background: var(--accent-glow);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    /* ── Role table ───────────────────────────────── */
+    .role-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .role-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px;
+    }
+    .role-card .role-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      margin-bottom: 8px;
+    }
+    .role-admin   { color: #818cf8; }
+    .role-agent   { color: var(--accent); }
+    .role-client  { color: var(--green); }
+    .role-card h3 { font-size: 16px; font-weight: 700; color: var(--white); margin-bottom: 12px; }
+    .role-card ul { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+    .role-card ul li {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      display: flex; align-items: center; gap: 7px;
+    }
+    .role-card ul li::before { content: '✓'; color: var(--accent); font-weight: 700; }
+
+    /* ── Footer ───────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 48px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+    footer span { color: var(--accent); }
+
+    /* ── Divider ──────────────────────────────────── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 48px 0;
+    }
+
+    /* ── Responsive ───────────────────────────────── */
+    @media (max-width: 768px) {
+      header { padding: 0 20px; }
+      .hero  { padding: 40px 20px; }
+      .container { padding: 0 20px 60px; }
+      .role-grid { grid-template-columns: 1fr; }
+      .hero-stats { gap: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── HEADER ─────────────────────────────────────────────────── -->
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-mark">ZT</div>
+      <span class="logo-text">ZimDesk</span>
+      <span class="logo-version">v2.0</span>
+    </div>
+    <div class="header-meta">Documento técnico · ZimTech · 2026</div>
+  </div>
+</header>
+
+<!-- ─── HERO ───────────────────────────────────────────────────── -->
+<div class="hero">
+  <div class="hero-tag">⚙ Documentación Técnica</div>
+  <h1>Funcionalidades & <span>Cambios</span></h1>
+  <p>Inventario completo de módulos, correcciones de bugs y mejoras aplicadas en ZimDesk v2. Stack: Next.js 14 · TypeScript · Prisma · PostgreSQL · Docker.</p>
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <span class="num">12</span>
+      <span class="lbl">Bugs Corregidos</span>
+    </div>
+    <div class="hero-stat">
+      <span class="num">9</span>
+      <span class="lbl">Módulos</span>
+    </div>
+    <div class="hero-stat">
+      <span class="num">3</span>
+      <span class="lbl">Roles de Usuario</span>
+    </div>
+    <div class="hero-stat">
+      <span class="num">10</span>
+      <span class="lbl">Archivos Modificados</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ─── STACK TECNOLÓGICO ──────────────────────────────────── -->
+  <div class="section-header">
+    <div class="section-dot"></div>
+    <div>
+      <h2>Stack Tecnológico</h2>
+      <div class="section-sub">Tecnologías utilizadas en la construcción de ZimDesk v2</div>
+    </div>
+  </div>
+
+  <table class="stack-table">
+    <thead>
+      <tr>
+        <th>Capa</th>
+        <th>Tecnología</th>
+        <th>Versión</th>
+        <th>Propósito</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Frontend</td>
+        <td>Next.js (App Router)</td>
+        <td><code>14.2.15</code></td>
+        <td>Framework principal, SSR + Client Components</td>
+      </tr>
+      <tr>
+        <td>Lenguaje</td>
+        <td>TypeScript</td>
+        <td><code>5.x</code></td>
+        <td>Tipado estático en toda la aplicación</td>
+      </tr>
+      <tr>
+        <td>ORM</td>
+        <td>Prisma</td>
+        <td><code>5.22</code></td>
+        <td>Acceso a base de datos con esquema tipado</td>
+      </tr>
+      <tr>
+        <td>Base de datos</td>
+        <td>PostgreSQL</td>
+        <td><code>16-alpine</code></td>
+        <td>Base de datos principal vía Docker</td>
+      </tr>
+      <tr>
+        <td>Autenticación</td>
+        <td>NextAuth v4</td>
+        <td><code>4.24</code></td>
+        <td>Sesiones JWT, Credentials provider</td>
+      </tr>
+      <tr>
+        <td>Estado servidor</td>
+        <td>TanStack Query v5</td>
+        <td><code>5.62</code></td>
+        <td>Caché de datos, mutaciones, invalidación</td>
+      </tr>
+      <tr>
+        <td>Estilos</td>
+        <td>Tailwind CSS</td>
+        <td><code>3.x</code></td>
+        <td>Utilidades CSS, paleta sidebar personalizada</td>
+      </tr>
+      <tr>
+        <td>Gráficos</td>
+        <td>Recharts</td>
+        <td><code>2.13</code></td>
+        <td>PieChart, BarChart en el dashboard</td>
+      </tr>
+      <tr>
+        <td>Formularios</td>
+        <td>React Hook Form + Zod</td>
+        <td><code>—</code></td>
+        <td>Validación de formularios con esquemas</td>
+      </tr>
+      <tr>
+        <td>Email</td>
+        <td>Nodemailer</td>
+        <td><code>6.9</code></td>
+        <td>Emails transaccionales asincrónicos</td>
+      </tr>
+      <tr>
+        <td>Infraestructura</td>
+        <td>Docker Compose</td>
+        <td><code>—</code></td>
+        <td>app + db (postgres) + redis en contenedores</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ─── ROLES DE USUARIO ─────────────────────────────────────── -->
+  <div class="section-header">
+    <div class="section-dot"></div>
+    <div>
+      <h2>Roles de Usuario</h2>
+      <div class="section-sub">Cada rol tiene un conjunto específico de permisos y vistas</div>
+    </div>
+  </div>
+
+  <div class="role-grid">
+    <div class="role-card">
+      <div class="role-label role-admin">Administrador</div>
+      <h3>Admin</h3>
+      <ul>
+        <li>Ver todos los tickets</li>
+        <li>Vista de Gestión y Conformidad</li>
+        <li>Asignar agentes y prioridades</li>
+        <li>Cerrar, cancelar y resolver tickets</li>
+        <li>CRUD de usuarios, departamentos, categorías</li>
+        <li>Editar FAQs y Normas de la Plataforma</li>
+        <li>Dashboard con métricas globales y SLA</li>
+      </ul>
+    </div>
+    <div class="role-card">
+      <div class="role-label role-agent">Agente</div>
+      <h3>Agent</h3>
+      <ul>
+        <li>Ver tickets asignados a su cuenta</li>
+        <li>Responder tickets con adjuntos</li>
+        <li>Cerrar y reabrir tickets</li>
+        <li>Dashboard de tickets propios</li>
+        <li>Consultar FAQs y Normas</li>
+        <li>Editar perfil y contraseña</li>
+      </ul>
+    </div>
+    <div class="role-card">
+      <div class="role-label role-client">Cliente</div>
+      <h3>Client</h3>
+      <ul>
+        <li>Crear tickets con adjuntos</li>
+        <li>Ver solo sus propios tickets</li>
+        <li>Responder en el hilo de conversación</li>
+        <li>Reabrir tickets cerrados</li>
+        <li>Dashboard de sus tickets</li>
+        <li>Consultar FAQs y Normas</li>
+        <li>Descargar ticket en HTML/PDF</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ─── MÓDULOS FUNCIONALES ───────────────────────────────────── -->
+  <div class="section-header">
+    <div class="section-dot"></div>
+    <div>
+      <h2>Módulos Funcionales</h2>
+      <div class="section-sub">Descripción detallada de cada módulo y sus capacidades</div>
+    </div>
+  </div>
+
+  <div class="cards-grid">
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-accent">🎫</div>
+        <div>
+          <div class="card-title">Sistema de Tickets</div>
+          <div class="card-route">/tickets · /tickets/[id]</div>
+        </div>
+      </div>
+      <p class="card-desc">Núcleo de la aplicación. Gestiona el ciclo de vida completo de los tickets de soporte, desde la creación hasta la resolución, con trazabilidad de cada cambio.</p>
+      <ul class="card-features">
+        <li>Ciclo completo: abierto → en progreso → en espera → cerrado → resuelto</li>
+        <li>8 estados con slugs únicos (no IDs hardcodeados)</li>
+        <li>4 prioridades: baja, media, alta, crítica (con colores personalizados)</li>
+        <li>Asignación de agente con auto-avance de estado</li>
+        <li>Historial completo de cambios (logs de auditoría)</li>
+        <li>Búsqueda por asunto o número de ticket con debounce 350ms</li>
+        <li>Filtros por estado, prioridad y paginación</li>
+        <li>Vista adaptativa por rol (gestión, asignados, conformidad)</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-accent">💬</div>
+        <div>
+          <div class="card-title">Conversación & Adjuntos</div>
+          <div class="card-route">/tickets/[id] · /api/tickets/[id]/messages</div>
+        </div>
+      </div>
+      <p class="card-desc">Hilo de mensajes entre cliente, agente y administrador con soporte para archivos adjuntos y actualización automática del estado del ticket.</p>
+      <ul class="card-features">
+        <li>Respuesta con texto plano o adjuntos múltiples</li>
+        <li>Distinción visual entre mensajes de staff y cliente</li>
+        <li>Cambio automático de estado al responder (SLA tracking)</li>
+        <li>Registro de primera respuesta para métricas SLA</li>
+        <li>Actualización atómica: SLA + estado en una sola operación DB</li>
+        <li>Notificación por email al destinatario correspondiente</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-green">📊</div>
+        <div>
+          <div class="card-title">Dashboard & KPIs</div>
+          <div class="card-route">/dashboard · /api/dashboard</div>
+        </div>
+      </div>
+      <p class="card-desc">Panel ejecutivo con métricas en tiempo real, gráficos por estado/prioridad/categoría y seguimiento de SLA, adaptado a cada rol de usuario.</p>
+      <ul class="card-features">
+        <li>KPIs: total, abiertos, cerrados, tiempo promedio de respuesta</li>
+        <li>Gráfico de distribución por estado (PieChart)</li>
+        <li>Gráfico de distribución por categoría (BarChart)</li>
+        <li>Distribución por prioridad con colores personalizados</li>
+        <li>Para admin: distribución por departamento, rendimiento por agente</li>
+        <li>Filtro por mes y año</li>
+        <li>Calendario de actividad con tickets del mes</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-indigo">👥</div>
+        <div>
+          <div class="card-title">Gestión de Usuarios</div>
+          <div class="card-route">/users · /api/users</div>
+        </div>
+      </div>
+      <p class="card-desc">CRUD completo de usuarios con asignación de roles y departamentos. Solo accesible para administradores.</p>
+      <ul class="card-features">
+        <li>Crear, editar y eliminar usuarios</li>
+        <li>Asignar rol: admin, agent o client</li>
+        <li>Asignar departamento</li>
+        <li>Búsqueda por nombre o email</li>
+        <li>Filtro por rol</li>
+        <li>Paginación de resultados</li>
+        <li>Contraseña hasheada con bcrypt (factor 10)</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-amber">🏢</div>
+        <div>
+          <div class="card-title">Departamentos</div>
+          <div class="card-route">/departments · /api/departments</div>
+        </div>
+      </div>
+      <p class="card-desc">Gestión de los departamentos de la organización que se asignan a los usuarios para segmentar los tickets por área.</p>
+      <ul class="card-features">
+        <li>Crear y editar departamentos</li>
+        <li>Ver cantidad de usuarios por departamento</li>
+        <li>El departamento del creador aparece en el ticket</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-amber">🏷</div>
+        <div>
+          <div class="card-title">Categorías</div>
+          <div class="card-route">/categories · /api/categories</div>
+        </div>
+      </div>
+      <p class="card-desc">Categorías que los clientes seleccionan al crear un ticket para clasificar el tipo de consulta o problema.</p>
+      <ul class="card-features">
+        <li>CRUD completo de categorías</li>
+        <li>Aparece en el listado de tickets y en el detalle</li>
+        <li>Usada para métricas en el dashboard</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-green">❓</div>
+        <div>
+          <div class="card-title">FAQs</div>
+          <div class="card-route">/faqs · /api/faqs</div>
+        </div>
+      </div>
+      <p class="card-desc">Base de conocimiento con preguntas frecuentes. Los administradores las crean y gestionan; agentes y clientes las consultan.</p>
+      <ul class="card-features">
+        <li>Acordeón colapsable por pregunta</li>
+        <li>Admin: crear, editar y eliminar FAQs</li>
+        <li>Agents y clients: solo lectura</li>
+        <li>Respuestas con formato pre-wrap</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-indigo">📋</div>
+        <div>
+          <div class="card-title">Normas de la Plataforma</div>
+          <div class="card-route">/platform-norms · /api/platform-norms</div>
+        </div>
+      </div>
+      <p class="card-desc">Documento editable por el administrador con las reglas y lineamientos del sistema de tickets, visible por todos los usuarios.</p>
+      <ul class="card-features">
+        <li>Editor de texto libre (Markdown/plain text)</li>
+        <li>Solo el admin puede editar</li>
+        <li>Todos los usuarios pueden leer</li>
+        <li>Guardado con invalidación de caché TanStack</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-accent">👤</div>
+        <div>
+          <div class="card-title">Perfil de Usuario</div>
+          <div class="card-route">/profile · /api/profile</div>
+        </div>
+      </div>
+      <p class="card-desc">Cada usuario puede actualizar su nombre y cambiar su contraseña desde su perfil personal.</p>
+      <ul class="card-features">
+        <li>Edición de nombre de usuario</li>
+        <li>Cambio de contraseña con verificación de contraseña actual</li>
+        <li>Email no modificable (seguridad)</li>
+        <li>Muestra rol y departamento actual</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-green">📄</div>
+        <div>
+          <div class="card-title">Exportación HTML/PDF</div>
+          <div class="card-route">/api/tickets/[id]/pdf</div>
+        </div>
+      </div>
+      <p class="card-desc">Genera un documento HTML formateado con todo el historial del ticket, listo para imprimir o guardar como PDF desde el navegador.</p>
+      <ul class="card-features">
+        <li>Encabezado con marca ZimDesk</li>
+        <li>Metadatos del ticket: estado, prioridad, categoría, fechas</li>
+        <li>Conversación completa con distinción visual por rol</li>
+        <li>Historial de acciones (logs)</li>
+        <li>Contenido escapado para prevenir XSS en el documento</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-indigo">📧</div>
+        <div>
+          <div class="card-title">Emails Transaccionales</div>
+          <div class="card-route">src/lib/mail.ts</div>
+        </div>
+      </div>
+      <p class="card-desc">Sistema de notificaciones por email asíncrono para los eventos más importantes del sistema de tickets.</p>
+      <ul class="card-features">
+        <li>Nuevo ticket creado (notifica a admins configurados)</li>
+        <li>Ticket asignado (notifica al agente)</li>
+        <li>Nueva respuesta en ticket (notifica al destinatario)</li>
+        <li>Cambio de estado del ticket</li>
+        <li>Fire-and-forget: no bloquea la respuesta HTTP</li>
+        <li>Plantillas HTML con branding ZimDesk</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-accent">🔐</div>
+        <div>
+          <div class="card-title">Autenticación</div>
+          <div class="card-route">/login · /api/auth</div>
+        </div>
+      </div>
+      <p class="card-desc">Login con credenciales (email + contraseña) gestionado por NextAuth con tokens JWT que incluyen rol y departamento del usuario.</p>
+      <ul class="card-features">
+        <li>JWT con rol, departmentId y avatar embebidos</li>
+        <li>Protección server-side en el layout del dashboard</li>
+        <li>Redirección automática a /login si no autenticado</li>
+        <li>Contraseñas con bcrypt</li>
+        <li>Logout desde el header</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- ─── CORRECCIONES DE BUGS ──────────────────────────────────── -->
+  <div class="section-header">
+    <div class="section-dot"></div>
+    <div>
+      <h2>Correcciones de Bugs</h2>
+      <div class="section-sub">Todos los bugs identificados en el análisis integral y sus soluciones aplicadas</div>
+    </div>
+  </div>
+
+  <div class="fix-list">
+
+    <div class="fix-item">
+      <span class="fix-badge badge-critical">Crítico</span>
+      <div class="fix-content">
+        <div class="fix-title">XSS — dangerouslySetInnerHTML sin sanitizar</div>
+        <div class="fix-desc">Los mensajes del ticket se renderizaban como HTML crudo, permitiendo inyección de scripts maliciosos. <strong>Fix:</strong> Removido <code>dangerouslySetInnerHTML</code> y reemplazado por render de texto plano con <code>whitespace-pre-wrap</code>. También agregada función <code>escapeHtml()</code> en utils para el exportador HTML/PDF.</div>
+        <div class="fix-file">src/app/(dashboard)/tickets/[id]/page.tsx:176 · src/app/api/tickets/[id]/pdf/route.ts · src/lib/utils.ts</div>
+      </div>
+    </div>
+
+    <div class="fix-item">
+      <span class="fix-badge badge-critical">Crítico</span>
+      <div class="fix-content">
+        <div class="fix-title">Rutas del sidebar devolvían 404</div>
+        <div class="fix-desc">Los links <code>/tickets/asignados</code>, <code>/tickets/gestion</code> y <code>/tickets/conformidad</code> no existían como páginas. Next.js los matcheaba como IDs dinámicos y fallaban. <strong>Fix:</strong> Cambiados a query params (<code>?view=asignados</code>, etc.). La página de tickets lee <code>view</code> desde <code>useSearchParams()</code> con fallback al valor por rol.</div>
+        <div class="fix-file">src/components/layout/Sidebar.tsx · src/app/(dashboard)/tickets/page.tsx</div>
+      </div>
+    </div>
+
+    <div class="fix-item">
+      <span class="fix-badge badge-critical">Crítico</span>
+      <div class="fix-content">
+        <div class="fix-title">Prisma: include + select simultáneos en /api/users</div>
+        <div class="fix-desc">La query de usuarios usaba <code>include: { department }</code> y <code>select: { ... }</code> al mismo tiempo, lo que Prisma rechaza en runtime con error. El listado de usuarios nunca cargaba. <strong>Fix:</strong> Eliminado <code>include</code> y migrado a <code>select</code> con departamento como relación anidada.</div>
+        <div class="fix-file">src/app/api/users/route.ts:47-55</div>
+      </div>
+    </div>
+
+    <div class="fix-item">
+      <span class="fix-badge badge-bug">Bug</span>
+      <div class="fix-content">
+        <div class="fix-title">PATCH /tickets/[id] — forzaba estado en_progreso siempre</div>
+        <div class="fix-desc">Cada vez que el admin cambiaba la prioridad o el agente, el status se sobreescribía a <code>en_progreso</code> incondicionalmente, reabriendo tickets ya cerrados o resueltos. <strong>Fix:</strong> El estado solo avanza a <code>en_progreso</code> cuando se asigna un agente a un ticket que sigue en estado <code>abierto</code>.</div>
+        <div class="fix-file">src/app/api/tickets/[id]/route.ts:60-67</div>
+      </div>
+    </div>
+
+    <div class="fix-item">
+      <span class="fix-badge badge-bug">Bug</span>
+      <div class="fix-content">
+        <div class="fix-title">Cancelar ticket usaba ID hardcodeado (statusId !== 1)</div>
+        <div class="fix-desc">La validación para cancelar un ticket comparaba <code>ticket.statusId !== 1</code> — el mismo bug crítico de v1 que motivó la migración. Si el seed corría en distinto orden, la cancelación se bloqueaba o permitía incorrectamente. <strong>Fix:</strong> Reemplazado por <code>ticket.status.slug !== 'abierto'</code>.</div>
+        <div class="fix-file">src/app/api/tickets/[id]/status/route.ts:31</div>
+      </div>
+    </div>
+
+    <div class="fix-item">
+      <span class="fix-badge badge-bug">Bug</span>
+      <div class="fix-content">
+        <div class="fix-title">Conformidad filtraba con IDs hardcodeados (statusId in [5, 6])</div>
+        <div class="fix-desc">La vista de conformidad para admins usaba <code>statusId: { in: [5, 6] }</code>, otro ID hardcodeado. Además el filtro manual de <code>statusId</code> por query param podía sobreescribirlo. <strong>Fix:</strong> Cambiado a filtro por relación <code>status.slug in ['resuelto', 'cerrado']</code>, independiente de IDs.</div>
+        <div class="fix-file">src/app/api/tickets/route.ts:37</div>
+      </div>
+    </div>
+
+    <div class="fix-item">
+      <span class="fix-badge badge-bug">Bug</span>
+      <div class="fix-content">
+        <div class="fix-title">Search OR array — filter(Boolean) no eliminaba {id: undefined}</div>
+        <div class="fix-desc">Cuando la búsqueda no era un número, el array de condiciones OR contenía <code>{ id: undefined }</code>, que es un objeto truthy y no es filtrado por <code>.filter(Boolean)</code>. Comportamiento indefinido en Prisma. <strong>Fix:</strong> Condición <code>id</code> agregada al array solo cuando el search es efectivamente un número.</div>
+        <div class="fix-file">src/app/api/tickets/route.ts:42-47</div>
+      </div>
+    </div>
+
+    <div class="fix-item">
+      <span class="fix-badge badge-bug">Bug</span>
+      <div class="fix-content">
+        <div class="fix-title">Link /faqs/ver devolvía 404 para agentes y clientes</div>
+        <div class="fix-desc">El sidebar mostraba un link a <code>/faqs/ver</code> para agentes y clientes, pero esa ruta no existe. La página de FAQs vive en <code>/faqs</code> y ya maneja la distinción de rol (admin ve botones de edición, el resto no). <strong>Fix:</strong> Link corregido a <code>/faqs</code>.</div>
+        <div class="fix-file">src/components/layout/Sidebar.tsx:31</div>
+      </div>
+    </div>
+
+    <div class="fix-item">
+      <span class="fix-badge badge-bug">Bug</span>
+      <div class="fix-content">
+        <div class="fix-title">SLA + estado del ticket en dos operaciones DB separadas (race condition)</div>
+        <div class="fix-desc">Al responder un ticket, <code>firstResponseAt</code> y <code>statusId</code> se actualizaban en dos llamadas <code>prisma.ticket.update()</code> separadas. Si la segunda fallaba, el ticket quedaba con SLA registrado pero estado incorrecto. <strong>Fix:</strong> Ambas actualizaciones combinadas en una sola operación atómica.</div>
+        <div class="fix-file">src/app/api/tickets/[id]/messages/route.ts:57-73</div>
+      </div>
+    </div>
+
+    <div class="fix-item">
+      <span class="fix-badge badge-bug">Bug</span>
+      <div class="fix-content">
+        <div class="fix-title">useParams() devuelve string | string[] sin type guard</div>
+        <div class="fix-desc">En la página de detalle de ticket, <code>id</code> de <code>useParams()</code> podía ser <code>string[]</code> pero se usaba directamente en URLs de API sin narroear el tipo. <strong>Fix:</strong> Agregado guard <code>Array.isArray(params.id) ? params.id[0] : params.id</code>.</div>
+        <div class="fix-file">src/app/(dashboard)/tickets/[id]/page.tsx:18</div>
+      </div>
+    </div>
+
+    <div class="fix-item">
+      <span class="fix-badge badge-debt">Deuda</span>
+      <div class="fix-content">
+        <div class="fix-title">isActive() del sidebar marcaba activos incorrectos</div>
+        <div class="fix-desc">La función <code>isActive</code> usaba <code>pathname.startsWith(href)</code>, haciendo que "Mis Tickets" apareciera activo también en <code>/tickets/create</code>. Con la migración a query params, se refactorizó completamente: exact match para dashboard y create, match por query param para vistas de tickets.</div>
+        <div class="fix-file">src/components/layout/Sidebar.tsx:54-75</div>
+      </div>
+    </div>
+
+    <div class="fix-item">
+      <span class="fix-badge badge-debt">Deuda</span>
+      <div class="fix-content">
+        <div class="fix-title">Búsqueda sin debounce disparaba query en cada keystroke</div>
+        <div class="fix-desc">Cada tecla pulsada en el buscador de tickets disparaba una nueva llamada a la API sin delay, generando requests innecesarios. <strong>Fix:</strong> Implementado debounce de 350ms con <code>useEffect + setTimeout</code> y estado <code>debouncedSearch</code> separado del input.</div>
+        <div class="fix-file">src/app/(dashboard)/tickets/page.tsx:26-29</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ─── MEJORAS APLICADAS ─────────────────────────────────────── -->
+  <div class="section-header">
+    <div class="section-dot"></div>
+    <div>
+      <h2>Mejoras Aplicadas</h2>
+      <div class="section-sub">Mejoras de arquitectura, seguridad y experiencia de usuario</div>
+    </div>
+  </div>
+
+  <div class="cards-grid">
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-green">🔒</div>
+        <div><div class="card-title">Seguridad: Escape de HTML</div></div>
+      </div>
+      <p class="card-desc">Función <code>escapeHtml()</code> en utils.ts aplicada en el exportador PDF/HTML para escapar contenido de usuario antes de interpolarlo en templates HTML.</p>
+      <ul class="card-features">
+        <li>Escapa: &amp; &lt; &gt; &quot; &#39;</li>
+        <li>Aplicada en mensajes y descripción del ticket</li>
+        <li>También aplicada en nombres de usuarios en el PDF</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-accent">⚡</div>
+        <div><div class="card-title">Sidebar con Suspense</div></div>
+      </div>
+      <p class="card-desc">El Sidebar fue refactorizado para envolver el componente interno que usa <code>useSearchParams()</code> en un <code>&lt;Suspense&gt;</code>, cumpliendo con los requerimientos de Next.js 14.</p>
+      <ul class="card-features">
+        <li>SidebarNav como componente interno con lógica de ruta</li>
+        <li>Sidebar público como wrapper con Suspense</li>
+        <li>Sin CSR bailout ni warnings de Next.js</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-amber">📧</div>
+        <div><div class="card-title">Emails con manejo de errores</div></div>
+      </div>
+      <p class="card-desc">Todos los calls a <code>sendMail()</code> ahora incluyen <code>.catch(console.error)</code> para evitar promesas no manejadas. Los errores de email quedan registrados sin afectar la respuesta HTTP.</p>
+      <ul class="card-features">
+        <li>Tickets route: creación de ticket</li>
+        <li>Status route: cambio de estado</li>
+        <li>Messages route: nueva respuesta</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-green">🗂</div>
+        <div><div class="card-title">Sección Labels del Sidebar</div></div>
+      </div>
+      <p class="card-desc">El sistema de etiquetas de sección del sidebar fue refactorizado para ser parte del objeto de cada ítem de navegación, eliminando el diccionario externo frágil y de difícil mantenimiento.</p>
+      <ul class="card-features">
+        <li>Propiedad <code>section?</code> en cada NavItem</li>
+        <li>Secciones: General, Tickets, Gestión, Mantenimiento, Ayuda</li>
+        <li>Lógica simplificada: muestra cuando cambia la sección</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-indigo">📊</div>
+        <div><div class="card-title">colSpan dinámico en tabla</div></div>
+      </div>
+      <p class="card-desc">El <code>colSpan</code> de la fila "sin resultados" en la tabla de tickets era hardcodeado en 9. Ahora se calcula dinámicamente según el rol del usuario para evitar inconsistencias visuales.</p>
+      <ul class="card-features">
+        <li>Cliente: 7 columnas</li>
+        <li>Agente: 8 columnas</li>
+        <li>Admin: 9 columnas</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-accent">🎯</div>
+        <div><div class="card-title">Lógica de asignación inteligente</div></div>
+      </div>
+      <p class="card-desc">La asignación de agentes ahora solo cambia el estado del ticket cuando es semánticamente correcto. Los tickets ya en progreso, cerrados o resueltos no son afectados por cambios de prioridad.</p>
+      <ul class="card-features">
+        <li>Ticket en "abierto" + asignar agente → avanza a "en_progreso"</li>
+        <li>Ticket en cualquier otro estado → solo cambia assignedTo o priorityId</li>
+        <li>Lookup de status por slug (no por ID)</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- ─── DEUDAS TÉCNICAS PENDIENTES ─────────────────────────────── -->
+  <div class="section-header">
+    <div class="section-dot"></div>
+    <div>
+      <h2>Deudas Técnicas Pendientes</h2>
+      <div class="section-sub">Issues conocidos que requieren trabajo futuro pero no son bloqueantes</div>
+    </div>
+  </div>
+
+  <div class="fix-list">
+
+    <div class="fix-item">
+      <span class="fix-badge badge-debt">Pendiente</span>
+      <div class="fix-content">
+        <div class="fix-title">Archivos en public/uploads sin autenticación</div>
+        <div class="fix-desc">Los adjuntos se sirven desde <code>/public/uploads/</code> como archivos estáticos. Cualquier persona con la URL puede acceder sin login. La solución correcta es mover los archivos fuera de <code>public/</code> y servir via un endpoint autenticado que verifique la sesión.</div>
+        <div class="fix-file">src/app/api/tickets/route.ts · src/app/api/tickets/[id]/messages/route.ts</div>
+      </div>
+    </div>
+
+    <div class="fix-item">
+      <span class="fix-badge badge-debt">Pendiente</span>
+      <div class="fix-content">
+        <div class="fix-title">Sin transacciones de base de datos en creación de ticket</div>
+        <div class="fix-desc">La creación del ticket, guardado de adjuntos y creación de log son 3 operaciones separadas sin <code>prisma.$transaction()</code>. Si falla el guardado de un archivo, el ticket existe sin adjuntos. Requiere transacción o manejo de rollback manual.</div>
+        <div class="fix-file">src/app/api/tickets/route.ts:102-141</div>
+      </div>
+    </div>
+
+    <div class="fix-item">
+      <span class="fix-badge badge-debt">Pendiente</span>
+      <div class="fix-content">
+        <div class="fix-title">Sin validación de MIME type en el servidor</div>
+        <div class="fix-desc">La extensión del archivo se extrae del nombre (<code>file.name.split('.').pop()</code>), fácilmente spoofeable. No se verifica el MIME type real del contenido binario. Se debería usar la librería <code>file-type</code> para verificar los primeros bytes del archivo.</div>
+        <div class="fix-file">src/app/api/tickets/route.ts:118 · src/app/api/tickets/[id]/messages/route.ts:40</div>
+      </div>
+    </div>
+
+    <div class="fix-item">
+      <span class="fix-badge badge-debt">Pendiente</span>
+      <div class="fix-content">
+        <div class="fix-title">Token JWT no se invalida al cambiar rol/departamento</div>
+        <div class="fix-desc">Si un admin cambia el rol de un usuario, ese usuario sigue con el rol viejo en su token JWT hasta que expire o cierre sesión. No hay mecanismo de invalidación server-side de sesiones. Solución: usar una estrategia de base de datos con NextAuth o verificar el rol contra DB en cada request.</div>
+        <div class="fix-file">src/lib/auth.ts</div>
+      </div>
+    </div>
+
+    <div class="fix-item">
+      <span class="fix-badge badge-debt">Pendiente</span>
+      <div class="fix-content">
+        <div class="fix-title">Dashboard carga todos los tickets del mes en memoria</div>
+        <div class="fix-desc">El endpoint del dashboard hace <code>prisma.ticket.findMany()</code> sin límite y agrega los datos en JavaScript. En producción con miles de tickets esto es ineficiente. La solución correcta es usar <code>GROUP BY</code> en SQL via Prisma <code>groupBy()</code> o vistas de base de datos.</div>
+        <div class="fix-file">src/app/api/dashboard/route.ts:26-34</div>
+      </div>
+    </div>
+
+    <div class="fix-item">
+      <span class="fix-badge badge-debt">Pendiente</span>
+      <div class="fix-content">
+        <div class="fix-title">Sin rate limiting en endpoints de API</div>
+        <div class="fix-desc">No hay límite de requests por IP o usuario. El endpoint de login y creación de tickets son vulnerables a abuso. Se debería implementar rate limiting con Redis (ya incluido en Docker Compose) usando la librería <code>@upstash/ratelimit</code> o middleware custom.</div>
+        <div class="fix-file">src/app/api/**</div>
+      </div>
+    </div>
+
+    <div class="fix-item">
+      <span class="fix-badge badge-debt">Pendiente</span>
+      <div class="fix-title">Avatar de usuario sin implementar</div>
+      <div class="fix-desc">El campo <code>avatar</code> existe en el schema Prisma y se referencia en el Header, pero no hay endpoint <code>POST /api/profile/avatar</code> ni UI para subir una imagen de perfil. El header muestra la inicial del nombre como fallback.</div>
+      <div class="fix-file">src/app/(dashboard)/profile/page.tsx · src/lib/auth.ts</div>
+    </div>
+
+  </div>
+
+  <!-- ─── PROPUESTAS DE FUNCIONES FUTURAS ──────────────────────── -->
+  <div class="section-header">
+    <div class="section-dot"></div>
+    <div>
+      <h2>Propuestas de Funciones Futuras</h2>
+      <div class="section-sub">Features recomendados para las próximas iteraciones del producto</div>
+    </div>
+  </div>
+
+  <div class="cards-grid">
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-accent">🔔</div>
+        <div><div class="card-title">Notificaciones en tiempo real</div></div>
+      </div>
+      <p class="card-desc">Implementar Server-Sent Events (SSE) o WebSockets para notificar sin polling cuando llega un nuevo mensaje o cambia el estado del ticket.</p>
+      <ul class="card-features">
+        <li>Badge con contador de mensajes no leídos en sidebar</li>
+        <li>Notificación toast al llegar un nuevo mensaje</li>
+        <li>Sin necesidad de refrescar la página</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-amber">⏱</div>
+        <div><div class="card-title">Alertas de SLA</div></div>
+      </div>
+      <p class="card-desc">Job programado (cron) que detecta tickets sin primera respuesta pasado el umbral de tiempo configurado y envía alertas al administrador.</p>
+      <ul class="card-features">
+        <li>Configuración de umbral SLA por categoría o prioridad</li>
+        <li>Email de alerta al admin con listado de tickets</li>
+        <li>Badge visual en el ticket que superó el SLA</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-green">📤</div>
+        <div><div class="card-title">Exportación CSV/Excel</div></div>
+      </div>
+      <p class="card-desc">Botón en el listado de tickets para exportar los resultados filtrados actuales a CSV, para reportes gerenciales o análisis en Excel.</p>
+      <ul class="card-features">
+        <li>Respeta todos los filtros activos (estado, prioridad, búsqueda)</li>
+        <li>Columnas: ID, asunto, estado, prioridad, agente, fecha, tiempo SLA</li>
+        <li>Solo para admin y agente</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-indigo">🎨</div>
+        <div><div class="card-title">Modo Oscuro completo</div></div>
+      </div>
+      <p class="card-desc">El sidebar ya es oscuro. Implementar dark mode completo para el área de contenido con toggle, respetando la preferencia del sistema.</p>
+      <ul class="card-features">
+        <li>Toggle en el header</li>
+        <li>CSS variables para ambos temas</li>
+        <li>Persistencia en localStorage</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-accent">✏️</div>
+        <div><div class="card-title">Editor de texto enriquecido</div></div>
+      </div>
+      <p class="card-desc">Reemplazar el textarea de respuestas por TipTap o Quill para permitir formato: negrita, listas, bloques de código, sin riesgo de XSS.</p>
+      <ul class="card-features">
+        <li>Negrita, cursiva, listas ordenadas y no ordenadas</li>
+        <li>Bloques de código</li>
+        <li>Sanitizado con DOMPurify al guardar y mostrar</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-amber">⌨️</div>
+        <div><div class="card-title">Command Palette (Cmd+K)</div></div>
+      </div>
+      <p class="card-desc">Buscador global activado con Cmd+K que permite navegar a tickets, usuarios o páginas sin usar el mouse.</p>
+      <ul class="card-features">
+        <li>Buscar tickets por número o asunto</li>
+        <li>Navegar a módulos del sistema</li>
+        <li>Para usuarios con muchos tickets</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <hr class="divider" />
+
+  <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 28px 32px; display: flex; align-items: center; gap: 20px;">
+    <div style="font-size: 36px; flex-shrink: 0;">✅</div>
+    <div>
+      <div style="font-size: 15px; font-weight: 700; color: var(--white); margin-bottom: 6px;">Estado del sistema tras la sesión de correcciones</div>
+      <div style="font-size: 13px; color: var(--text-muted); line-height: 1.7;">
+        <strong style="color: var(--red);">12 bugs corregidos</strong> incluyendo XSS, rutas rotas, conflict Prisma include+select, hardcoded IDs, race condition en SLA, y falta de type guard.
+        <strong style="color: var(--green);">10 archivos modificados</strong>.
+        Las funcionalidades core (tickets, autenticación, dashboard, emails) están operativas y sin vulnerabilidades críticas.
+        Las deudas técnicas restantes son mejoras de hardening y no bloquean el uso en producción supervisada.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ─── FOOTER ──────────────────────────────────────────────────── -->
+<footer>
+  <span>ZimDesk v2</span> · Sistema de Mesa de Ayuda · ZimTech · Generado el 27 de junio de 2026
+</footer>
+
+</body>
+</html>

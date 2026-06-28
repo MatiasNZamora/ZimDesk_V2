@@ -1,0 +1,201 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              Int       @id @default(autoincrement())
+  name            String
+  email           String    @unique
+  emailVerifiedAt DateTime?
+  password        String
+  role            Role      @default(client)
+  avatar          String?
+  departmentId    Int
+  department      Department @relation(fields: [departmentId], references: [id])
+  createdTickets  Ticket[]   @relation("creator")
+  assignedTickets Ticket[]   @relation("agent")
+  messages        TicketMessage[]
+  logs            Log[]
+  resetTokens     PasswordResetToken[]
+  notifications   Notification[]
+  tokenVersion    Int        @default(0)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@index([email])
+  @@index([role])
+  @@index([departmentId])
+}
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  userId    Int
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
+
+enum Role {
+  admin
+  agent
+  client
+}
+
+model Department {
+  id        Int      @id @default(autoincrement())
+  name      String
+  users     User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String
+  tickets   Ticket[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Status {
+  id      Int      @id @default(autoincrement())
+  name    String
+  slug    String   @unique
+  tickets Ticket[]
+}
+
+model Priority {
+  id      Int      @id @default(autoincrement())
+  name    String
+  slug    String   @unique
+  color   String   @default("#6c757d")
+  tickets Ticket[]
+}
+
+model Ticket {
+  id              Int       @id @default(autoincrement())
+  userId          Int
+  assignedTo      Int?
+  subject         String
+  description     String
+  statusId        Int
+  priorityId      Int
+  categoryId      Int
+  closedAt        DateTime?
+  firstResponseAt DateTime?
+  slaAlertedAt    DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  creator     User       @relation("creator", fields: [userId], references: [id])
+  agent       User?      @relation("agent", fields: [assignedTo], references: [id])
+  status      Status     @relation(fields: [statusId], references: [id])
+  priority    Priority   @relation(fields: [priorityId], references: [id])
+  category    Category   @relation(fields: [categoryId], references: [id])
+  messages      TicketMessage[]
+  attachments   AttachmentTicket[]
+  logs          Log[]
+  notifications Notification[]
+
+  @@index([userId])
+  @@index([assignedTo])
+  @@index([statusId])
+  @@index([priorityId])
+  @@index([categoryId])
+  @@index([createdAt])
+}
+
+model TicketMessage {
+  id          Int       @id @default(autoincrement())
+  ticketId    Int
+  userId      Int
+  message     String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id])
+  attachments AttachmentMessage[]
+
+  @@index([ticketId])
+}
+
+model AttachmentTicket {
+  id        Int    @id @default(autoincrement())
+  ticketId  Int
+  filePath  String
+  fileType  String
+  fileName  String
+  fileSize  Int    @default(0)
+
+  ticket    Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+}
+
+model AttachmentMessage {
+  id              Int           @id @default(autoincrement())
+  ticketMessageId Int
+  filePath        String
+  fileType        String
+  fileName        String
+  fileSize        Int           @default(0)
+
+  message         TicketMessage @relation(fields: [ticketMessageId], references: [id], onDelete: Cascade)
+
+  @@index([ticketMessageId])
+}
+
+model Log {
+  id        Int      @id @default(autoincrement())
+  ticketId  Int
+  userId    Int
+  action    String
+  createdAt DateTime @default(now())
+
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([ticketId])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  type      String
+  ticketId  Int
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+model Faq {
+  id        Int      @id @default(autoincrement())
+  question  String
+  answer    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PlatformNorm {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

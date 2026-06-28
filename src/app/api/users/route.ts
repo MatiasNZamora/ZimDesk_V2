@@ -1,0 +1,102 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import bcrypt from 'bcryptjs'
+import { z } from 'zod'
+
+const createSchema = z.object({
+  name: z.string().min(2),
+  email: z.string().email(),
+  password: z.string().min(6),
+  role: z.enum(['admin', 'agent', 'client']),
+  departmentId: z.coerce.number().int().positive(),
+})
+
+export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  const { searchParams } = new URL(req.url)
+  const roleFilter = searchParams.get('role') ?? ''
+
+  // Cualquier usuario autenticado puede pedir la lista de agentes (dropdown de asignación)
+  // Siempre retorna array simple, no paginado
+  if (roleFilter === 'agent' && session.user.role !== 'admin') {
+    const agents = await prisma.user.findMany({
+      where: { role: 'agent' },
+      select: { id: true, name: true, email: true },
+      orderBy: { name: 'asc' },
+    })
+    return NextResponse.json(agents)
+  }
+
+  // El resto del endpoint es exclusivo para admin
+  if (session.user.role !== 'admin') {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+
+  // Cuando el admin pide role=agent sin paginación, devuelve array simple también
+  if (roleFilter === 'agent' && !searchParams.get('page')) {
+    const agents = await prisma.user.findMany({
+      where: { role: 'agent' },
+      select: { id: true, name: true, email: true },
+      orderBy: { name: 'asc' },
+    })
+    return NextResponse.json(agents)
+  }
+
+  const search = searchParams.get('search') ?? ''
+  const page = Number(searchParams.get('page') ?? 1)
+  const perPage = Number(searchParams.get('perPage') ?? 25)
+
+  const where: any = {}
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: 'insensitive' } },
+      { email: { contains: search, mode: 'insensitive' } },
+    ]
+  }
+  if (roleFilter) where.role = roleFilter
+
+  const [data, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      orderBy: { name: 'asc' },
+      skip: (page - 1) * perPage,
+      take: perPage,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        avatar: true,
+        createdAt: true,
+        department: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.user.count({ where }),
+  ])
+
+  return NextResponse.json({ data, total, page, perPage, totalPages: Math.ceil(total / perPage) })
+}
+
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session || session.user.role !== 'admin') return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  const body = await req.json()
+  const parsed = createSchema.safeParse(body)
+  if (!parsed.success) return NextResponse.json({ errors: parsed.error.flatten().fieldErrors }, { status: 422 })
+
+  const existing = await prisma.user.findUnique({ where: { email: parsed.data.email } })
+  if (existing) return NextResponse.json({ error: 'El email ya está registrado' }, { status: 409 })
+
+  const hashed = await bcrypt.hash(parsed.data.password, 10)
+  const user = await prisma.user.create({
+    data: { ...parsed.data, password: hashed },
+    select: { id: true, name: true, email: true, role: true },
+  })
+
+  return NextResponse.json(user, { status: 201 })
+}

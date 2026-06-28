@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ZimDesk — Análisis Técnico & Plan de Migración</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #21253a;
+      --border: #2d3050;
+      --accent: #6366f1;
+      --accent2: #818cf8;
+      --green: #22c55e;
+      --yellow: #facc15;
+      --red: #ef4444;
+      --blue: #38bdf8;
+      --purple: #a78bfa;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+    /* ── HEADER ── */
+    .hero {
+      background: linear-gradient(135deg, #1e1b4b 0%, #0f1117 60%);
+      border-bottom: 1px solid var(--border);
+      padding: 56px 40px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at top left, rgba(99,102,241,.18) 0%, transparent 60%);
+    }
+    .hero-inner { max-width: 1100px; margin: 0 auto; position: relative; }
+    .badge {
+      display: inline-block;
+      background: rgba(99,102,241,.2);
+      border: 1px solid rgba(99,102,241,.4);
+      color: var(--accent2);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 12px;
+      margin-bottom: 16px;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+    .hero h1 { font-size: 2.6rem; font-weight: 800; letter-spacing: -.02em; margin-bottom: 8px; }
+    .hero h1 span { color: var(--accent2); }
+    .hero p { color: var(--muted); max-width: 620px; font-size: 1rem; }
+    .meta-row { display: flex; gap: 24px; margin-top: 24px; flex-wrap: wrap; }
+    .meta-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .meta-chip strong { color: var(--text); }
+
+    /* ── LAYOUT ── */
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 40px; }
+    section { margin-bottom: 56px; }
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    h2 .ico { font-size: 1.3rem; }
+    h3 { font-size: 1.05rem; font-weight: 600; color: var(--accent2); margin: 20px 0 8px; }
+    p { color: var(--muted); margin-bottom: 8px; }
+
+    /* ── GRID CARDS ── */
+    .grid { display: grid; gap: 16px; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 22px;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .card h3 { margin: 0 0 6px; font-size: 1rem; color: var(--text); }
+    .card p { font-size: 14px; }
+
+    /* ── STACK PILLS ── */
+    .stack { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+    .pill-php   { background: #7c3aed22; color: #c4b5fd; border: 1px solid #7c3aed44; }
+    .pill-laravel { background: #dc262622; color: #fca5a5; border: 1px solid #dc262644; }
+    .pill-blade { background: #f9731622; color: #fdba74; border: 1px solid #f9731644; }
+    .pill-mysql { background: #0369a122; color: #7dd3fc; border: 1px solid #0369a144; }
+    .pill-tailwind { background: #0891b222; color: #67e8f9; border: 1px solid #0891b244; }
+    .pill-alpine { background: #1d4ed822; color: #93c5fd; border: 1px solid #1d4ed844; }
+    .pill-vite  { background: #854d0e22; color: #fde68a; border: 1px solid #854d0e44; }
+    .pill-react { background: #06b6d422; color: #67e8f9; border: 1px solid #06b6d444; }
+    .pill-next  { background: #f8fafc22; color: #e2e8f0; border: 1px solid #f8fafc44; }
+    .pill-pg    { background: #1e40af22; color: #93c5fd; border: 1px solid #1e40af44; }
+    .pill-docker{ background: #1d4ed822; color: #bfdbfe; border: 1px solid #1d4ed844; }
+    .pill-ts    { background: #1e40af22; color: #93c5fd; border: 1px solid #1e40af44; }
+    .pill-green { background: #16a34a22; color: #86efac; border: 1px solid #16a34a44; }
+    .pill-red   { background: #dc262622; color: #fca5a5; border: 1px solid #dc262644; }
+
+    /* ── TABLE ── */
+    .tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .tbl th {
+      background: var(--surface2);
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .tbl td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    .tbl tr:last-child td { border-bottom: none; }
+    .tbl tr:hover td { background: var(--surface2); }
+    .tbl code {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-family: 'Fira Code', monospace;
+      font-size: 12px;
+      color: var(--accent2);
+    }
+    .tbl-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    /* ── PRO / CON ── */
+    .pro-con { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media(max-width:640px){ .pro-con { grid-template-columns: 1fr; } }
+    .pro-box { border-left: 3px solid var(--green); }
+    .con-box { border-left: 3px solid var(--red); }
+    .box-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; }
+    .pro-box .box-title { color: var(--green); }
+    .con-box .box-title { color: var(--red); }
+    ul.check { list-style: none; padding: 0; }
+    ul.check li { padding: 4px 0 4px 22px; position: relative; font-size: 14px; color: var(--muted); }
+    ul.check li::before { content: '✓'; position: absolute; left: 0; color: var(--green); font-weight: 700; }
+    ul.cross li::before { content: '✗'; color: var(--red); }
+
+    /* ── TIMELINE / PLAN ── */
+    .timeline { position: relative; padding-left: 30px; }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 9px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--border);
+    }
+    .tl-item { position: relative; margin-bottom: 28px; }
+    .tl-dot {
+      position: absolute;
+      left: -30px;
+      top: 4px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 3px solid var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .tl-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .tl-phase {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      background: rgba(99,102,241,.2);
+      color: var(--accent2);
+      border-radius: 4px;
+      padding: 2px 8px;
+    }
+    .tl-title { font-size: 1rem; font-weight: 700; color: var(--text); }
+    .tl-time { font-size: 12px; color: var(--muted); margin-left: auto; }
+    .tl-body { font-size: 14px; color: var(--muted); }
+    .tl-tasks { list-style: disc; padding-left: 18px; margin-top: 6px; }
+    .tl-tasks li { font-size: 13px; color: var(--muted); padding: 2px 0; }
+
+    /* ── STATUS BADGE ── */
+    .status {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .s-good  { background: #16a34a22; color: #86efac; }
+    .s-warn  { background: #ca8a0422; color: #fde68a; }
+    .s-bad   { background: #dc262622; color: #fca5a5; }
+
+    /* ── RECOMMENDATION CARDS ── */
+    .rec-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+      border-left: 4px solid var(--accent);
+    }
+    .rec-num {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--accent2);
+      margin-bottom: 4px;
+    }
+    .rec-title { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .rec-body { font-size: 14px; color: var(--muted); }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding: 32px;
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      margin-top: 40px;
+    }
+
+    @media(max-width:720px){
+      .hero { padding: 32px 20px 24px; }
+      .wrap { padding: 24px 16px; }
+      .hero h1 { font-size: 1.8rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ────────────────── HERO ────────────────── -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="badge">Análisis Técnico Interno · 2026</div>
+    <h1>ZimDesk <span>v1</span></h1>
+    <p>Visión técnica completa de la aplicación actual, evaluación de migración a React + Next.js + PostgreSQL + Docker, y plan de acción por fases.</p>
+    <div class="meta-row">
+      <div class="meta-chip"><strong>Framework:</strong> Laravel 10</div>
+      <div class="meta-chip"><strong>Base de datos:</strong> MySQL</div>
+      <div class="meta-chip"><strong>Frontend:</strong> Blade + Tailwind + Alpine.js</div>
+      <div class="meta-chip"><strong>Empresa:</strong> ZimTech</div>
+      <div class="meta-chip"><strong>Fecha:</strong> Junio 2026</div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ────────────────── 1. STACK ACTUAL ────────────────── -->
+  <section>
+    <h2><span class="ico">🔧</span> Stack Tecnológico Actual</h2>
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-title">Backend</div>
+        <div class="stack">
+          <span class="pill pill-php">PHP 8.1+</span>
+          <span class="pill pill-laravel">Laravel 10</span>
+          <span class="pill pill-laravel">Laravel Breeze</span>
+          <span class="pill pill-laravel">Laravel Sanctum</span>
+          <span class="pill pill-laravel">DomPDF</span>
+          <span class="pill pill-laravel">Guzzle HTTP</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Frontend</div>
+        <div class="stack">
+          <span class="pill pill-blade">Blade Templates</span>
+          <span class="pill pill-tailwind">Tailwind CSS 3</span>
+          <span class="pill pill-alpine">Alpine.js 3</span>
+          <span class="pill pill-vite">Vite 5</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Base de Datos</div>
+        <div class="stack">
+          <span class="pill pill-mysql">MySQL</span>
+        </div>
+        <p style="margin-top:10px; font-size:13px;">14 tablas relacionales. Conexión directa sin capa de caché.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Infraestructura & Email</div>
+        <div class="stack">
+          <span class="pill pill-green">SMTP Hostinger</span>
+          <span class="pill pill-green">Storage local (public)</span>
+        </div>
+        <p style="margin-top:10px; font-size:13px;">Sin Docker. Sin Redis activo. Sin colas (queue: sync). Sin tests automatizados.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────── 2. MAPA FUNCIONAL ────────────────── -->
+  <section>
+    <h2><span class="ico">🗺️</span> Mapa Funcional — Módulos de la Aplicación</h2>
+
+    <h3>Roles del sistema</h3>
+    <div class="grid grid-3" style="margin-bottom:20px;">
+      <div class="card">
+        <div class="card-title">Admin</div>
+        <p>Gestión total. Mantiene usuarios, categorías, departamentos, FAQs, normas. Asigna agentes a tickets. Visualiza métricas y SLA.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Agent</div>
+        <p>Ve sus tickets asignados. Responde tickets. Cierra tickets. Visualiza dashboard propio con métricas por mes.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Client</div>
+        <p>Crea tickets con archivos adjuntos. Consulta estado de sus tickets. Responde mensajes. Descarga PDF. Reabrir tickets cerrados.</p>
+      </div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Módulo</th>
+            <th>Controlador</th>
+            <th>Funcionalidades</th>
+            <th>Roles</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Autenticación</strong></td>
+            <td><code>Auth/*</code></td>
+            <td>Login, Registro, Reset de contraseña, Verificación de email, Cambio de contraseña</td>
+            <td>Todos</td>
+          </tr>
+          <tr>
+            <td><strong>Dashboard</strong></td>
+            <td><code>DashboardController</code></td>
+            <td>Dashboard dinámico por rol. Admin: estados, categorías, prioridades, departamentos, agentes, SLA, calendario. Agent/Client: versión reducida.</td>
+            <td>Todos</td>
+          </tr>
+          <tr>
+            <td><strong>Tickets — Creación</strong></td>
+            <td><code>TicketController@store</code></td>
+            <td>Formulario con asunto, descripción (rich text), categoría. Adjuntos múltiples (img/docs/video). Validación de tamaño por tipo. Email de notificación al crear.</td>
+            <td>Client</td>
+          </tr>
+          <tr>
+            <td><strong>Tickets — Listado cliente</strong></td>
+            <td><code>TicketController@index</code></td>
+            <td>Paginación, filtros por estado, prioridad y búsqueda libre.</td>
+            <td>Client</td>
+          </tr>
+          <tr>
+            <td><strong>Tickets — Gestión admin</strong></td>
+            <td><code>TicketController@gestion</code></td>
+            <td>Vista completa de todos los tickets. Asignación de agente, cambio de prioridad, cambio automático a "En Progreso". Emails al agente y cliente.</td>
+            <td>Admin</td>
+          </tr>
+          <tr>
+            <td><strong>Tickets — Asignados</strong></td>
+            <td><code>TicketController@asignados</code></td>
+            <td>Lista de tickets asignados al agente logueado. Filtros iguales al listado cliente.</td>
+            <td>Agent</td>
+          </tr>
+          <tr>
+            <td><strong>Tickets — Detalle</strong></td>
+            <td><code>TicketController@show</code></td>
+            <td>Hilo completo de mensajes con adjuntos. Botón de cierre, reapertura. Historial de logs. Descarga PDF.</td>
+            <td>Todos</td>
+          </tr>
+          <tr>
+            <td><strong>Tickets — Responder</strong></td>
+            <td><code>TicketController@responder</code></td>
+            <td>Mensajes con adjuntos. Cambio automático de estado según rol. Registro SLA (first_response_at). Menciones especiales <code>@normasdelaplataforma</code> / <code>@faq</code>. Emails de notificación.</td>
+            <td>Todos</td>
+          </tr>
+          <tr>
+            <td><strong>Tickets — Estados</strong></td>
+            <td>Múltiples métodos</td>
+            <td>Cerrar, Reabrir, Cancelar, Marcar Resuelto. Cada acción dispara log + email al involucrado.</td>
+            <td>Admin / Agent / Client</td>
+          </tr>
+          <tr>
+            <td><strong>Tickets — Conformidad</strong></td>
+            <td><code>TicketController@conformidad</code></td>
+            <td>Vista de tickets cerrados/resueltos. Marcado como resuelto definitivo.</td>
+            <td>Admin</td>
+          </tr>
+          <tr>
+            <td><strong>PDF</strong></td>
+            <td><code>TicketController@generarPDF</code></td>
+            <td>Exportación completa del ticket (mensajes, adjuntos, logs) en A4 portrait con DomPDF.</td>
+            <td>Todos</td>
+          </tr>
+          <tr>
+            <td><strong>Usuarios</strong></td>
+            <td><code>UserController</code></td>
+            <td>CRUD completo. Avatar de usuario. Asignación de rol y departamento.</td>
+            <td>Admin</td>
+          </tr>
+          <tr>
+            <td><strong>Departamentos</strong></td>
+            <td><code>DepartmentController</code></td>
+            <td>CRUD. Los usuarios pertenecen a un departamento.</td>
+            <td>Admin</td>
+          </tr>
+          <tr>
+            <td><strong>Categorías</strong></td>
+            <td><code>CategoryController</code></td>
+            <td>CRUD. Los tickets se clasifican por categoría.</td>
+            <td>Admin</td>
+          </tr>
+          <tr>
+            <td><strong>FAQs</strong></td>
+            <td><code>FaqController</code></td>
+            <td>CRUD (admin) + vista pública para todos los roles.</td>
+            <td>Admin / vista todos</td>
+          </tr>
+          <tr>
+            <td><strong>Normas de Plataforma</strong></td>
+            <td><code>PlatformNormController</code></td>
+            <td>Registro único editable por el admin. Vista pública. Se puede mencionar desde mensajes con <code>@normasdelaplataforma</code>.</td>
+            <td>Admin / vista todos</td>
+          </tr>
+          <tr>
+            <td><strong>Perfil</strong></td>
+            <td><code>ProfileController</code></td>
+            <td>Edición de nombre, email, avatar. Cambio de contraseña. Eliminación de cuenta.</td>
+            <td>Todos</td>
+          </tr>
+          <tr>
+            <td><strong>Logs</strong></td>
+            <td><code>Log::register()</code></td>
+            <td>Auditoría automática de todas las acciones sobre tickets. Persiste usuario, ticket, acción y timestamp.</td>
+            <td>Sistema automático</td>
+          </tr>
+          <tr>
+            <td><strong>Emails transaccionales</strong></td>
+            <td><code>App\Mail\*</code></td>
+            <td>8 emails distintos: creación, asignación (agente y cliente), respuesta (agente y cliente), cierre, reapertura, cancelación.</td>
+            <td>Sistema automático</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ────────────────── 3. ESQUEMA DE BASE DE DATOS ────────────────── -->
+  <section>
+    <h2><span class="ico">🗄️</span> Esquema de Base de Datos</h2>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Tabla</th>
+            <th>Columnas clave</th>
+            <th>Relaciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>users</code></td>
+            <td>id, name, email, password, role (admin|agent|client), department_id, avatar</td>
+            <td>→ departments, tickets, ticket_messages, logs</td>
+          </tr>
+          <tr>
+            <td><code>departments</code></td>
+            <td>id, name</td>
+            <td>← users</td>
+          </tr>
+          <tr>
+            <td><code>tickets</code></td>
+            <td>id, user_id, assigned_to, subject, description, status_id, priority_id, category_id, closed_at, first_response_at</td>
+            <td>→ users(x2), status, priority, categories, ticket_messages, attachments_ticket, logs</td>
+          </tr>
+          <tr>
+            <td><code>status</code></td>
+            <td>id, name</td>
+            <td>← tickets (8 estados)</td>
+          </tr>
+          <tr>
+            <td><code>priority</code></td>
+            <td>id, name, color</td>
+            <td>← tickets</td>
+          </tr>
+          <tr>
+            <td><code>categories</code></td>
+            <td>id, name</td>
+            <td>← tickets</td>
+          </tr>
+          <tr>
+            <td><code>ticket_messages</code></td>
+            <td>id, ticket_id, user_id, message (longText)</td>
+            <td>→ tickets, users, attachments_messages</td>
+          </tr>
+          <tr>
+            <td><code>attachments_ticket</code></td>
+            <td>id, ticket_id, file_path, file_type</td>
+            <td>→ tickets</td>
+          </tr>
+          <tr>
+            <td><code>attachments_messages</code></td>
+            <td>id, ticket_message_id, file_path, file_type</td>
+            <td>→ ticket_messages</td>
+          </tr>
+          <tr>
+            <td><code>logs</code></td>
+            <td>id, ticket_id, user_id, action, created_at</td>
+            <td>→ tickets, users</td>
+          </tr>
+          <tr>
+            <td><code>faqs</code></td>
+            <td>id, question, answer</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td><code>platform_norms</code></td>
+            <td>id, content</td>
+            <td>Registro único</td>
+          </tr>
+          <tr>
+            <td><code>system_logs</code></td>
+            <td>id, …</td>
+            <td>Logs a nivel sistema (separados de logs de tickets)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:12px; font-size:13px;">Los 8 estados son: <strong>1-Abierto, 2-En Progreso, 3-En Espera del Cliente, 4-Respuesta del Cliente, 5-Resuelto, 6-Cerrado, 7-Reabierto, 8-Cancelado</strong>. Los IDs están hardcodeados en el controlador — deuda técnica a resolver en la migración.</p>
+  </section>
+
+  <!-- ────────────────── 4. FLUJO DE ESTADOS ────────────────── -->
+  <section>
+    <h2><span class="ico">🔄</span> Flujo de Estados de un Ticket</h2>
+    <div class="card">
+      <pre style="font-family: 'Fira Code', monospace; font-size: 13px; color: var(--muted); line-height: 2; overflow-x: auto;">
+  [Client crea]
+       │
+       ▼
+  1 · ABIERTO ──── Admin gestiona ──────────────────────────────────────────┐
+       │                                                                     │
+       ▼                                                                     ▼
+  2 · EN PROGRESO ←──── asigna agente + prioridad               8 · CANCELADO
+       │
+       ├─── Agente/Admin responde ──► 3 · EN ESPERA DEL CLIENTE
+       │                                        │
+       │                                  Cliente responde
+       │                                        │
+       │                                        ▼
+       │                              4 · RESPUESTA DEL CLIENTE
+       │                                        │
+       │                              Agente/Admin responde
+       │                                        │
+       │                                        ▼
+       ├──────────────────────────────► Cierre (Admin/Agent) ──► 6 · CERRADO
+       │                                                                │
+       │                                         Admin marca resuelto  │
+       │                                                                ▼
+       │                                                        5 · RESUELTO
+       │
+       └──────── Cualquiera reabre ─────────────────────────────► 7 · REABIERTO
+      </pre>
+    </div>
+  </section>
+
+  <!-- ────────────────── 5. DIAGNÓSTICO ACTUAL ────────────────── -->
+  <section>
+    <h2><span class="ico">🩺</span> Diagnóstico Técnico del Estado Actual</h2>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Área</th>
+            <th>Estado</th>
+            <th>Observación</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Arquitectura MVC</td>
+            <td><span class="status s-good">BIEN</span></td>
+            <td>Separación clara entre Controller, Model y View. Rutas bien organizadas por rol.</td>
+          </tr>
+          <tr>
+            <td>Autenticación</td>
+            <td><span class="status s-good">BIEN</span></td>
+            <td>Laravel Breeze + Sanctum. Middleware de roles propio. Funcional y seguro.</td>
+          </tr>
+          <tr>
+            <td>Email transaccional</td>
+            <td><span class="status s-good">BIEN</span></td>
+            <td>8 mails dedicados con Mailable. Excepciones capturadas para no interrumpir el flujo.</td>
+          </tr>
+          <tr>
+            <td>Adjuntos</td>
+            <td><span class="status s-good">BIEN</span></td>
+            <td>Validación de tipo y tamaño por extensión. Almacenamiento público organizado por ticket/mensaje.</td>
+          </tr>
+          <tr>
+            <td>Auditoría de logs</td>
+            <td><span class="status s-good">BIEN</span></td>
+            <td>Registro automático de cada acción sobre tickets con usuario, descripción y timestamp.</td>
+          </tr>
+          <tr>
+            <td>IDs de estados hardcodeados</td>
+            <td><span class="status s-bad">DEUDA</span></td>
+            <td>El controlador usa números literales (status_id = 2, 5, 6…). Frágil si cambia el seed.</td>
+          </tr>
+          <tr>
+            <td>Colas (Queues)</td>
+            <td><span class="status s-bad">AUSENTE</span></td>
+            <td>QUEUE_CONNECTION=sync. Emails se envían de forma síncrona, bloqueando la respuesta HTTP.</td>
+          </tr>
+          <tr>
+            <td>Caché</td>
+            <td><span class="status s-bad">AUSENTE</span></td>
+            <td>CACHE_DRIVER=file. Redis instalado pero inactivo. Dashboard recalcula todo en cada petición.</td>
+          </tr>
+          <tr>
+            <td>Tests</td>
+            <td><span class="status s-bad">AUSENTE</span></td>
+            <td>Sin tests unitarios ni de integración. El proyecto creció sin cobertura automática.</td>
+          </tr>
+          <tr>
+            <td>Real-time / Websockets</td>
+            <td><span class="status s-bad">AUSENTE</span></td>
+            <td>Pusher configurado pero vacío. No hay notificaciones en tiempo real.</td>
+          </tr>
+          <tr>
+            <td>Paginación</td>
+            <td><span class="status s-good">BIEN</span></td>
+            <td>25 registros por página con persistencia de filtros (withQueryString).</td>
+          </tr>
+          <tr>
+            <td>SLA</td>
+            <td><span class="status s-warn">BÁSICO</span></td>
+            <td>Se registra first_response_at. El dashboard muestra promedio en minutos. Sin alertas ni umbrales configurables.</td>
+          </tr>
+          <tr>
+            <td>Entorno Docker</td>
+            <td><span class="status s-bad">AUSENTE</span></td>
+            <td>Depende del entorno local del desarrollador. Sin contenedores.</td>
+          </tr>
+          <tr>
+            <td>Seguridad CSRF</td>
+            <td><span class="status s-good">BIEN</span></td>
+            <td>Middleware CSRF activo. Transacciones DB con rollback.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ────────────────── 6. MIGRACIÓN: PRO/CON ────────────────── -->
+  <section>
+    <h2><span class="ico">⚖️</span> ¿Migrar a React + Next.js + PostgreSQL + Docker?</h2>
+
+    <h3 style="color: var(--text); font-size: 1.1rem; margin-bottom: 16px;">Stack propuesto</h3>
+    <div class="stack" style="margin-bottom: 28px;">
+      <span class="pill pill-react">React 18+</span>
+      <span class="pill pill-next">Next.js 14+ (App Router)</span>
+      <span class="pill pill-ts">TypeScript</span>
+      <span class="pill pill-pg">PostgreSQL</span>
+      <span class="pill pill-docker">Docker + Docker Compose</span>
+      <span class="pill pill-green">Prisma ORM / Drizzle</span>
+      <span class="pill pill-green">NextAuth.js / Auth.js</span>
+      <span class="pill pill-green">Tailwind CSS</span>
+    </div>
+
+    <h3>Frontend: Laravel Blade → React + Next.js</h3>
+    <div class="pro-con" style="margin-bottom: 20px;">
+      <div class="card pro-box">
+        <div class="box-title">Pros</div>
+        <ul class="check">
+          <li>Componentes reutilizables — el dashboard triplicado por rol se unifica con props</li>
+          <li>UX reactiva sin recargas de página (SPA parcial)</li>
+          <li>Ecosistema masivo: shadcn/ui, Radix, Recharts para gráficos</li>
+          <li>TypeScript elimina errores de tipo en runtime</li>
+          <li>Server Components (Next.js) = SSR sin bundle extra en cliente</li>
+          <li>Better DX: hot reload, Turbopack, error overlays</li>
+        </ul>
+      </div>
+      <div class="card con-box">
+        <div class="box-title">Contras</div>
+        <ul class="check cross">
+          <li>Curva de aprendizaje si el equipo solo conoce Blade</li>
+          <li>El App Router de Next.js tiene complejidad nueva (server vs client components)</li>
+          <li>Más boilerplate inicial que Blade para formularios simples</li>
+          <li>SEO no es prioritario para un sistema interno — SSR es un beneficio menor</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Backend: PHP/Laravel → API Routes Next.js / Laravel API</h3>
+    <div class="pro-con" style="margin-bottom: 20px;">
+      <div class="card pro-box">
+        <div class="box-title">Opción A — Mantener Laravel como API REST</div>
+        <ul class="check">
+          <li>Reutiliza toda la lógica de negocio existente (emails, logs, PDF)</li>
+          <li>Menor riesgo: solo migras el frontend</li>
+          <li>Sanctum ya soporta SPA auth</li>
+          <li>Laravel Queues para emails asíncronos</li>
+        </ul>
+      </div>
+      <div class="card con-box">
+        <div class="box-title">Opción B — Migrar a Next.js full-stack (API Routes + Server Actions)</div>
+        <ul class="check cross">
+          <li>Elimina PHP completamente — un solo lenguaje (TypeScript)</li>
+          <li>Server Actions simplifican mutaciones sin API explícita</li>
+          <li>Pero: reescritura total del backend (meses de trabajo)</li>
+          <li>DomPDF → alternativas JS (Puppeteer, @react-pdf) menos maduras</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Base de Datos: MySQL → PostgreSQL</h3>
+    <div class="pro-con" style="margin-bottom: 20px;">
+      <div class="card pro-box">
+        <div class="box-title">Pros de PostgreSQL</div>
+        <ul class="check">
+          <li>Columnas JSONB nativas — útil para campos dinámicos futuros</li>
+          <li>Full-text search integrado — reemplaza LIKE en búsquedas</li>
+          <li>Tipos avanzados: arrays, enum nativo, UUID</li>
+          <li>Mejor concurrencia bajo alta carga</li>
+          <li>Prisma ORM tiene soporte excelente con PG</li>
+          <li>Estándar en Vercel, Railway, Supabase — deploy más fácil</li>
+        </ul>
+      </div>
+      <div class="card con-box">
+        <div class="box-title">Contras</div>
+        <ul class="check cross">
+          <li>Migración de datos requiere testing exhaustivo</li>
+          <li>Algunas queries MySQL con ISNULL() difieren en PG (IS NULL)</li>
+          <li>Si el hosting actual solo ofrece MySQL, hay costo extra</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Contenedores: Sin Docker → Docker + Compose</h3>
+    <div class="pro-con">
+      <div class="card pro-box">
+        <div class="box-title">Pros de Docker</div>
+        <ul class="check">
+          <li>"Funciona en mi máquina" se elimina — paridad total dev/prod</li>
+          <li>Onboarding nuevos devs en minutos: docker compose up</li>
+          <li>Servicios aislados: app, db, redis, mailhog</li>
+          <li>CI/CD con GitHub Actions + Docker Hub</li>
+          <li>Escalabilidad horizontal con Kubernetes futuro</li>
+        </ul>
+      </div>
+      <div class="card con-box">
+        <div class="box-title">Contras</div>
+        <ul class="check cross">
+          <li>Overhead de configuración inicial (~1 semana)</li>
+          <li>Mayor uso de RAM en desarrollo local</li>
+          <li>Hosting compartido (cPanel) no soporta Docker</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────── 7. VEREDICTO ────────────────── -->
+  <section>
+    <h2><span class="ico">🎯</span> Veredicto & Recomendación Estratégica</h2>
+    <div class="grid grid-2">
+      <div class="card" style="border-left: 4px solid var(--green);">
+        <div class="card-title">Recomendado</div>
+        <h3 style="color: var(--green); margin: 0 0 10px;">Migración Progresiva — Opción A</h3>
+        <p><strong>Backend:</strong> Mantener Laravel 10/11 como API REST. Agregar Queues (Redis), caché y tests.</p>
+        <p><strong>Frontend:</strong> Migrar de Blade a React + Next.js App Router (TypeScript + Tailwind).</p>
+        <p><strong>DB:</strong> Migrar a PostgreSQL al mismo tiempo que se Dockeriza.</p>
+        <p><strong>Infra:</strong> Docker Compose para dev. Deploy en Railway / Render / VPS con contenedores.</p>
+      </div>
+      <div class="card" style="border-left: 4px solid var(--red);">
+        <div class="card-title">No Recomendado</div>
+        <h3 style="color: var(--red); margin: 0 0 10px;">Big Bang Rewrite — Opción B</h3>
+        <p>Reescribir todo en Next.js full-stack elimina toda la lógica de negocio estable (emails, PDF, logs, SLA) y multiplica el riesgo.</p>
+        <p>Solo válido si el equipo tiene experiencia fuerte en TypeScript backend y el sistema está en versión 0.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────── 8. BUENAS PRÁCTICAS ────────────────── -->
+  <section>
+    <h2><span class="ico">📐</span> Buenas Prácticas — Lo que hay que resolver sí o sí</h2>
+    <div class="grid grid-2">
+      <div class="rec-card">
+        <div class="rec-num">01 · Backend</div>
+        <div class="rec-title">Eliminar IDs hardcodeados de estados</div>
+        <div class="rec-body">Reemplazar <code>status_id = 2</code> por <code>Status::where('slug', 'en_progreso')->first()->id</code> o agregar constantes en el modelo. Un seed diferente rompe toda la lógica.</div>
+      </div>
+      <div class="rec-card">
+        <div class="rec-num">02 · Performance</div>
+        <div class="rec-title">Activar colas asíncronas</div>
+        <div class="rec-body">Cambiar <code>QUEUE_CONNECTION=redis</code> y enviar todos los emails con <code>Mail::queue()</code>. El usuario no debe esperar el envío SMTP para ver la respuesta del servidor.</div>
+      </div>
+      <div class="rec-card">
+        <div class="rec-num">03 · Arquitectura</div>
+        <div class="rec-title">Extraer lógica de negocio a Services</div>
+        <div class="rec-body">El <code>TicketController</code> tiene ~400 líneas con lógica mezclada. Crear <code>TicketService</code>, <code>NotificationService</code> y <code>LogService</code> para separar responsabilidades y permitir testing.</div>
+      </div>
+      <div class="rec-card">
+        <div class="rec-num">04 · Seguridad</div>
+        <div class="rec-title">Autorización con Policies, no solo middleware</div>
+        <div class="rec-body">El middleware de rol protege rutas pero dentro de los métodos no hay validación de que el usuario pueda acceder a ese ticket específico. Un client podría acceder al PDF de otro si adivina el ID.</div>
+      </div>
+      <div class="rec-card">
+        <div class="rec-num">05 · Base de Datos</div>
+        <div class="rec-title">Agregar índices en columnas de filtrado</div>
+        <div class="rec-body">Las columnas <code>status_id</code>, <code>priority_id</code>, <code>assigned_to</code>, <code>user_id</code> en la tabla <code>tickets</code> son usadas en WHERE constantemente. Sin índices, cada filtro hace full scan.</div>
+      </div>
+      <div class="rec-card">
+        <div class="rec-num">06 · Testing</div>
+        <div class="rec-title">Cubrir el flujo de tickets con Feature Tests</div>
+        <div class="rec-body">Con Pest o PHPUnit, testear el ciclo completo: crear → asignar → responder → cerrar. Garantiza que ningún refactor rompe el core.</div>
+      </div>
+      <div class="rec-card">
+        <div class="rec-num">07 · Frontend</div>
+        <div class="rec-title">Componentes en React con estado local</div>
+        <div class="rec-body">El dashboard triplicado (admin/agent/client) con lógica duplicada se unifica con un componente <code>&lt;TicketStatsGrid role={role} data={data} /&gt;</code>. Elimina ~300 líneas de Blade repetidas.</div>
+      </div>
+      <div class="rec-card">
+        <div class="rec-num">08 · Observabilidad</div>
+        <div class="rec-title">Separar log de sistema del log de tickets</div>
+        <div class="rec-body">Ya existe la tabla <code>system_logs</code> pero no se usa consistentemente. Centralizar errores en un canal dedicado (Sentry o Laravel Telescope) para ver errores en producción.</div>
+      </div>
+      <div class="rec-card">
+        <div class="rec-num">09 · DevOps</div>
+        <div class="rec-title">Variables de entorno y secretos seguros</div>
+        <div class="rec-body">El archivo <code>.env.template</code> contiene contraseñas reales (SMTP, DB). Nunca commitear credenciales. Usar <code>.env.example</code> con valores vacíos y gestionar secretos con GitHub Secrets o Vault.</div>
+      </div>
+      <div class="rec-card">
+        <div class="rec-num">10 · SLA</div>
+        <div class="rec-title">Alertas y umbrales de SLA configurables</div>
+        <div class="rec-body">El campo <code>first_response_at</code> existe pero no hay alertas si un ticket lleva X horas sin respuesta. Agregar job programado que notifique al admin cuando se supera el umbral.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────── 9. PLAN DE MIGRACIÓN ────────────────── -->
+  <section>
+    <h2><span class="ico">🚀</span> Plan de Migración por Fases</h2>
+    <div class="timeline">
+
+      <div class="tl-item">
+        <div class="tl-dot">1</div>
+        <div class="tl-header">
+          <span class="tl-phase">Fase 1</span>
+          <span class="tl-title">Saneamiento del código actual</span>
+          <span class="tl-time">2–3 semanas</span>
+        </div>
+        <div class="tl-body">
+          Antes de migrar, limpiar las deudas técnicas para que la base sea sólida.
+          <ul class="tl-tasks">
+            <li>Reemplazar IDs hardcodeados de estados por constantes o slugs</li>
+            <li>Crear <code>TicketService</code> y <code>NotificationService</code> extrayendo lógica del controlador</li>
+            <li>Agregar Laravel Policies para autorización a nivel de recurso</li>
+            <li>Activar Redis + queues para envío asíncrono de emails</li>
+            <li>Agregar índices de base de datos en columnas de filtrado frecuente</li>
+            <li>Limpiar .env.template eliminando credenciales reales</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-dot">2</div>
+        <div class="tl-header">
+          <span class="tl-phase">Fase 2</span>
+          <span class="tl-title">Dockerización del entorno</span>
+          <span class="tl-time">1 semana</span>
+        </div>
+        <div class="tl-body">
+          Crear infraestructura reproducible para desarrollo y base para producción.
+          <ul class="tl-tasks">
+            <li>Crear <code>docker-compose.yml</code> con servicios: app (PHP-FPM), nginx, mysql, redis, mailhog</li>
+            <li>Migrar base de datos a PostgreSQL (ajustar queries incompatibles)</li>
+            <li>Configurar <code>Dockerfile</code> optimizado para producción (multi-stage build)</li>
+            <li>Documentar comandos de arranque en README</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-dot">3</div>
+        <div class="tl-header">
+          <span class="tl-phase">Fase 3</span>
+          <span class="tl-title">Convertir Laravel en API REST</span>
+          <span class="tl-time">2–3 semanas</span>
+        </div>
+        <div class="tl-body">
+          Preparar el backend para ser consumido por el nuevo frontend React.
+          <ul class="tl-tasks">
+            <li>Crear API Resources (<code>TicketResource</code>, <code>UserResource</code>, etc.) para serialización consistente</li>
+            <li>Mover todas las rutas a <code>routes/api.php</code> con prefijo <code>/api/v1/</code></li>
+            <li>Configurar Laravel Sanctum para SPA (cookie-based auth)</li>
+            <li>Agregar paginación API, filtros como query params, responses estandarizadas</li>
+            <li>Escribir Feature Tests de los endpoints principales con Pest</li>
+            <li>Documentar la API con Laravel Scribe o Swagger</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-dot">4</div>
+        <div class="tl-header">
+          <span class="tl-phase">Fase 4</span>
+          <span class="tl-title">Nuevo Frontend: Next.js + React</span>
+          <span class="tl-time">6–8 semanas</span>
+        </div>
+        <div class="tl-body">
+          Construir el frontend desde cero en Next.js 14 con App Router.
+          <ul class="tl-tasks">
+            <li>Setup: Next.js 14, TypeScript, Tailwind CSS, shadcn/ui, TanStack Query</li>
+            <li>Autenticación: NextAuth.js con provider Credentials → Laravel API</li>
+            <li>Layout base con sidebar responsive (igual al Velzon actual)</li>
+            <li>Módulo Tickets: listado, creación (drag & drop archivos), detalle con hilo de mensajes</li>
+            <li>Dashboard unificado por rol con Recharts para gráficos</li>
+            <li>CRUD de mantenimiento (Usuarios, Categorías, Departamentos, FAQs)</li>
+            <li>Editor de normas de plataforma</li>
+            <li>Perfil de usuario con upload de avatar</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-dot">5</div>
+        <div class="tl-header">
+          <span class="tl-phase">Fase 5</span>
+          <span class="tl-title">Real-time & Features avanzadas</span>
+          <span class="tl-time">2–3 semanas</span>
+        </div>
+        <div class="tl-body">
+          Agregar las capacidades que la versión actual no tiene.
+          <ul class="tl-tasks">
+            <li>Notificaciones en tiempo real con Laravel Echo + Pusher / Soketi (self-hosted)</li>
+            <li>Alertas SLA: job programado que detecta tickets sin respuesta > N horas</li>
+            <li>Búsqueda full-text en tickets con PostgreSQL FTS</li>
+            <li>Exportación CSV/Excel de listados</li>
+            <li>Modo dark/light toggle persistente</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-dot">6</div>
+        <div class="tl-header">
+          <span class="tl-phase">Fase 6</span>
+          <span class="tl-title">CI/CD & Deploy</span>
+          <span class="tl-time">1 semana</span>
+        </div>
+        <div class="tl-body">
+          Automatizar el pipeline de despliegue.
+          <ul class="tl-tasks">
+            <li>GitHub Actions: lint → test → build → deploy en cada PR a main</li>
+            <li>Frontend: Vercel o Cloudflare Pages</li>
+            <li>Backend API: Railway / Render / VPS con Docker</li>
+            <li>Base de datos: Supabase (PostgreSQL managed) o Neon.tech</li>
+            <li>Secretos: GitHub Secrets + .env en plataforma de hosting</li>
+            <li>Staging environment separado de producción</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RESUMEN DE TIEMPOS -->
+    <div class="card" style="margin-top: 28px;">
+      <div class="card-title">Estimación total de la migración</div>
+      <div class="tbl-wrap" style="margin-top: 10px;">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Fase</th>
+              <th>Esfuerzo</th>
+              <th>Riesgo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>1 · Saneamiento</td><td>2–3 semanas</td><td><span class="status s-good">Bajo</span></td></tr>
+            <tr><td>2 · Dockerización + PostgreSQL</td><td>1 semana</td><td><span class="status s-warn">Medio</span></td></tr>
+            <tr><td>3 · Laravel API REST</td><td>2–3 semanas</td><td><span class="status s-warn">Medio</span></td></tr>
+            <tr><td>4 · Frontend Next.js</td><td>6–8 semanas</td><td><span class="status s-warn">Medio-Alto</span></td></tr>
+            <tr><td>5 · Real-time + Features</td><td>2–3 semanas</td><td><span class="status s-warn">Medio</span></td></tr>
+            <tr><td>6 · CI/CD + Deploy</td><td>1 semana</td><td><span class="status s-good">Bajo</span></td></tr>
+            <tr>
+              <td><strong>TOTAL</strong></td>
+              <td><strong>~14–19 semanas</strong></td>
+              <td><span class="status s-warn">Gestionable</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────────────── 10. CONCLUSIÓN ────────────────── -->
+  <section>
+    <h2><span class="ico">💡</span> Conclusión</h2>
+    <div class="card" style="border-left: 4px solid var(--accent);">
+      <p><strong>ZimDesk</strong> es una aplicación funcional y bien estructurada para ser un sistema de mesa de ayuda interno. El modelo de datos es sólido, el sistema de logs y emails es completo, y la separación por roles está bien implementada.</p>
+      <br>
+      <p><strong>La migración a React + Next.js + PostgreSQL + Docker es estratégicamente correcta</strong> para escalar el sistema. El punto más crítico no es el stack sino el orden: limpiar primero, luego dockerizar, luego exponer la API, y finalmente construir el nuevo frontend. Intentar hacer todo en paralelo es el error más común y más costoso.</p>
+      <br>
+      <p>La deuda técnica más urgente a resolver antes de cualquier migración es: <strong>colas asíncronas para emails</strong>, <strong>authorization policies</strong> e <strong>IDs de estado hardcodeados</strong>. Todo lo demás es mejora incremental.</p>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  ZimDesk — Análisis Técnico Interno · Generado el 26 de Junio de 2026 · ZimTech
+</footer>
+
+</body>
+</html>
