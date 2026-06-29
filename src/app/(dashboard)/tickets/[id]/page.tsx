@@ -538,6 +538,18 @@ export default function TicketDetailPage() {
             />
           )}
 
+          {/* DAR CONFORMIDAD — solo cliente cuando está resuelto */}
+          {slug === 'resuelto' && role === 'client' && (
+            <ActionBtn
+              onClick={() => changeStatus.mutate('dar_conformidad')}
+              disabled={actionPending}
+              icon={<CheckCircle size={15} />}
+              label="Dar conformidad"
+              description="Confirmar que la solución es satisfactoria"
+              variant="green"
+            />
+          )}
+
           {/* REABRIR */}
           {['cerrado', 'resuelto'].includes(slug) && (role === 'admin' || role === 'client') && (
             <ActionBtn

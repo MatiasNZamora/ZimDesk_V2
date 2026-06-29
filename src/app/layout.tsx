@@ -2,10 +2,25 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { Providers } from './providers'
 import { Toaster } from 'sonner'
+import { prisma } from '@/lib/prisma'
 
-export const metadata: Metadata = {
-  title: { default: 'ZimDesk', template: '%s · ZimDesk' },
-  description: 'Sistema de Mesa de Ayuda — ZimTech',
+async function getAppConfig() {
+  try {
+    const rows = await prisma.appConfig.findMany({ where: { key: { in: ['app_name', 'favicon_url'] } } })
+    const map = Object.fromEntries(rows.map(r => [r.key, r.value]))
+    return { name: map['app_name'] ?? 'ZimDesk', faviconUrl: map['favicon_url'] ?? '' }
+  } catch {
+    return { name: 'ZimDesk', faviconUrl: '' }
+  }
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { name, faviconUrl } = await getAppConfig()
+  return {
+    title: { default: name, template: `%s · ${name}` },
+    description: 'Sistema de Mesa de Ayuda',
+    ...(faviconUrl ? { icons: { icon: faviconUrl, shortcut: faviconUrl } } : {}),
+  }
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

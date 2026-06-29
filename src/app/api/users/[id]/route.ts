@@ -11,7 +11,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 
   const body = await req.json()
-  const { name, email, password, role, departmentId } = body
+  const { name, email, password, role, departmentId, phone, whatsappKey } = body
   const targetId = Number(params.id)
 
   const current = await prisma.user.findUnique({
@@ -20,7 +20,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   })
   if (!current) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
 
-  const updateData: any = { name, email, role, departmentId: Number(departmentId) }
+  const updateData: any = { name, email, role, departmentId: Number(departmentId), phone: phone || null, whatsappKey: whatsappKey || null }
   if (password) updateData.password = await bcrypt.hash(password, 10)
 
   // Si cambió el rol o el departamento, incrementar tokenVersion para invalidar la sesión activa

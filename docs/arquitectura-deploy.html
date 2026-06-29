@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ZimDesk — Arquitectura & Deploy</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #21253a;
+      --border: #2d3050;
+      --accent: #6366f1;
+      --accent2: #818cf8;
+      --green: #22c55e;
+      --yellow: #facc15;
+      --red: #ef4444;
+      --blue: #38bdf8;
+      --purple: #a78bfa;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    /* ── HEADER ── */
+    .hero {
+      background: linear-gradient(135deg, #1e1b4b 0%, #0f1117 60%);
+      border-bottom: 1px solid var(--border);
+      padding: 56px 40px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at top left, rgba(99,102,241,.18) 0%, transparent 60%);
+    }
+    .hero-inner { max-width: 1100px; margin: 0 auto; position: relative; }
+    .badge {
+      display: inline-block;
+      background: rgba(99,102,241,.2);
+      border: 1px solid rgba(99,102,241,.4);
+      color: var(--accent2);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 12px;
+      margin-bottom: 16px;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+    .hero h1 { font-size: 2.6rem; font-weight: 800; letter-spacing: -.02em; margin-bottom: 8px; }
+    .hero h1 span { color: var(--accent2); }
+    .hero p { color: var(--muted); max-width: 640px; font-size: 1rem; }
+    .meta-row { display: flex; gap: 24px; margin-top: 24px; flex-wrap: wrap; }
+    .meta-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .meta-chip strong { color: var(--text); }
+
+    /* ── LAYOUT ── */
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 40px; }
+    section { margin-bottom: 56px; }
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    h2 .ico { font-size: 1.3rem; }
+    h3 { font-size: 1.05rem; font-weight: 600; color: var(--accent2); margin: 20px 0 8px; }
+    p { color: var(--muted); margin-bottom: 8px; }
+
+    /* ── GRID CARDS ── */
+    .grid { display: grid; gap: 16px; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 22px;
+    }
+    .card.green { border-color: #16a34a66; background: #16a34a0a; }
+    .card.red   { border-color: #dc262666; background: #dc26260a; }
+    .card.yellow { border-color: #ca8a0466; background: #ca8a040a; }
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .card h3 { margin: 0 0 6px; font-size: 1rem; }
+    .card h3.green-text { color: var(--green); }
+    .card h3.red-text   { color: var(--red); }
+    .card p { font-size: 14px; }
+
+    /* ── DIAGRAM ── */
+    .diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .layer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .layer-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 24px;
+      text-align: center;
+      min-width: 140px;
+    }
+    .layer-box .layer-icon { font-size: 1.8rem; margin-bottom: 4px; }
+    .layer-box .layer-name { font-size: 13px; font-weight: 700; color: var(--text); }
+    .layer-box .layer-sub  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .layer-box.accent-box { border-color: var(--accent); background: rgba(99,102,241,.08); }
+    .layer-arrow {
+      font-size: 1.6rem;
+      color: var(--muted);
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+    }
+
+    /* ── TABLE ── */
+    .tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .tbl th {
+      background: var(--surface2);
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .tbl td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      color: var(--muted);
+    }
+    .tbl tr:last-child td { border-bottom: none; }
+    .tbl tr:hover td { background: var(--surface2); }
+    .tbl .td-name { color: var(--text); font-weight: 600; }
+    .tbl code {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 12px;
+      color: var(--blue);
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+    }
+
+    /* ── STEPS ── */
+    .steps { display: flex; flex-direction: column; gap: 12px; }
+    .step {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .step-num {
+      flex-shrink: 0;
+      width: 30px;
+      height: 30px;
+      background: rgba(99,102,241,.2);
+      border: 1px solid rgba(99,102,241,.4);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent2);
+      margin-top: 2px;
+    }
+    .step-content { flex: 1; }
+    .step-content strong { color: var(--text); display: block; margin-bottom: 2px; }
+    .step-content span { font-size: 13px; color: var(--muted); }
+
+    /* ── CODE BLOCK ── */
+    .code-block {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      font-size: 13px;
+      overflow-x: auto;
+      margin: 16px 0;
+      line-height: 1.8;
+    }
+    .code-block .c-comment { color: #6a7280; }
+    .code-block .c-key    { color: #f472b6; }
+    .code-block .c-val    { color: #86efac; }
+    .code-block .c-str    { color: #fde68a; }
+    .code-block .c-hl     { background: rgba(99,102,241,.15); border-left: 3px solid var(--accent); padding-left: 8px; margin-left: -8px; display: block; }
+
+    /* ── ALERT ── */
+    .alert {
+      border-radius: 10px;
+      padding: 16px 20px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+    .alert.warning {
+      background: rgba(234,179,8,.08);
+      border: 1px solid rgba(234,179,8,.3);
+    }
+    .alert.error {
+      background: rgba(239,68,68,.08);
+      border: 1px solid rgba(239,68,68,.3);
+    }
+    .alert-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 1px; }
+    .alert-body strong { color: var(--text); display: block; margin-bottom: 4px; font-size: 14px; }
+    .alert-body p { font-size: 13px; margin: 0; }
+
+    /* ── PILLS ── */
+    .stack { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+    .pill-next   { background: #f8fafc22; color: #e2e8f0; border: 1px solid #f8fafc44; }
+    .pill-pg     { background: #1e40af22; color: #93c5fd; border: 1px solid #1e40af44; }
+    .pill-docker { background: #1d4ed822; color: #bfdbfe; border: 1px solid #1d4ed844; }
+    .pill-ts     { background: #1e40af22; color: #93c5fd; border: 1px solid #1e40af44; }
+    .pill-green  { background: #16a34a22; color: #86efac; border: 1px solid #16a34a44; }
+    .pill-red    { background: #dc262622; color: #fca5a5; border: 1px solid #dc262644; }
+    .pill-yellow { background: #ca8a0422; color: #fde68a; border: 1px solid #ca8a0444; }
+    .pill-purple { background: #7c3aed22; color: #c4b5fd; border: 1px solid #7c3aed44; }
+
+    /* ── BADGE STATUS ── */
+    .status-yes { color: var(--green); font-weight: 700; }
+    .status-no  { color: var(--red);   font-weight: 700; }
+    .status-mid { color: var(--yellow);font-weight: 700; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════ HERO ══════════════ -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="badge">ZimDesk V2 · Infraestructura</div>
+    <h1>Arquitectura &amp; <span>Deploy</span></h1>
+    <p>Cómo está construida la app, qué ventajas ofrece el patrón elegido y cómo desplegarla en producción.</p>
+    <div class="meta-row">
+      <div class="meta-chip"><strong>Stack</strong> · Next.js 14 + Prisma + PostgreSQL</div>
+      <div class="meta-chip"><strong>Patrón</strong> · Fullstack Monolítico</div>
+      <div class="meta-chip"><strong>Deploy</strong> · Docker / VPS / Vercel</div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ══════════════ SECCIÓN 1: PATRÓN ══════════════ -->
+  <section>
+    <h2><span class="ico">🏗️</span> Patrón Fullstack Monolítico</h2>
+    <p>ZimDesk utiliza Next.js como framework único que maneja tanto la interfaz como la lógica de servidor. No hay un backend separado — todo convive en el mismo repositorio y proceso.</p>
+
+    <!-- Diagrama de capas -->
+    <div class="diagram">
+      <div class="layer">
+        <div class="layer-box">
+          <div class="layer-icon">🌐</div>
+          <div class="layer-name">Browser</div>
+          <div class="layer-sub">React + Tailwind</div>
+        </div>
+      </div>
+      <div class="layer-arrow">→</div>
+      <div class="layer">
+        <div class="layer-box accent-box">
+          <div class="layer-icon">⚡</div>
+          <div class="layer-name">Next.js 14</div>
+          <div class="layer-sub">UI + API Routes + SSR</div>
+        </div>
+      </div>
+      <div class="layer-arrow">→</div>
+      <div class="layer">
+        <div class="layer-box">
+          <div class="layer-icon">🔷</div>
+          <div class="layer-name">Prisma ORM</div>
+          <div class="layer-sub">Type-safe queries</div>
+        </div>
+      </div>
+      <div class="layer-arrow">→</div>
+      <div class="layer">
+        <div class="layer-box">
+          <div class="layer-icon">🐘</div>
+          <div class="layer-name">PostgreSQL</div>
+          <div class="layer-sub">Base de datos</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Beneficios del patrón</h3>
+    <div class="card" style="margin-bottom:16px;">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Beneficio</th>
+            <th>Detalle</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="td-name">⚡ Un solo deploy</td>
+            <td>Frontend + backend en la misma imagen Docker. Un solo <code>npm run build</code>, una sola unidad de despliegue.</td>
+          </tr>
+          <tr>
+            <td class="td-name">🔄 Sin latencia interna</td>
+            <td>Las API Routes corren en el mismo proceso. No hay round-trip HTTP entre frontend y backend como ocurriría con Express separado.</td>
+          </tr>
+          <tr>
+            <td class="td-name">🔷 TypeScript compartido</td>
+            <td>Los tipos definidos en <code>src/types/index.ts</code> se usan tanto en UI como en los endpoints. Sin duplicar interfaces.</td>
+          </tr>
+          <tr>
+            <td class="td-name">🗄️ SSR directo a la DB</td>
+            <td>Los Server Components pueden consultar Prisma directamente, sin pasar por la API REST. Reduce una capa completa de I/O.</td>
+          </tr>
+          <tr>
+            <td class="td-name">📦 Menos infraestructura</td>
+            <td>No hay que gestionar dos servidores, dos pipelines de CI/CD ni dos dominios. El <code>docker-compose.yml</code> levanta todo.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Limitaciones (y por qué no importan en ZimDesk)</h3>
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-title">Limitación</div>
+        <h3>Escalado acoplado</h3>
+        <p>No se puede escalar el backend de forma independiente al frontend — se escala todo junto.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Por qué no importa aquí</div>
+        <h3>ZimDesk es un sistema interno</h3>
+        <p>El volumen de usuarios es bajo y predecible. Escalar la app entera es suficiente y mucho más simple.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;" class="grid grid-2">
+      <div class="card">
+        <div class="card-title">Limitación</div>
+        <h3>Caída total si falla el proceso</h3>
+        <p>Si el servidor Next.js cae, tanto la UI como la API dejan de responder.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Por qué no importa aquí</div>
+        <h3>Docker con restart automático</h3>
+        <p>El <code>docker-compose.yml</code> tiene <code>restart: unless-stopped</code>. El contenedor se recupera solo ante fallos.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SECCIÓN 2: HOSTINGER ══════════════ -->
+  <section>
+    <h2><span class="ico">🖥️</span> ¿Se puede deployar en Hostinger?</h2>
+    <p>Depende del tipo de hosting. Next.js necesita un proceso Node.js corriendo de forma persistente — no es un archivo PHP que se ejecuta por request.</p>
+
+    <div class="grid grid-2" style="margin: 20px 0;">
+      <div class="card red">
+        <div class="card-title">❌ Shared Hosting</div>
+        <h3 class="red-text">No funciona</h3>
+        <p>El shared hosting de Hostinger usa Apache + PHP. No soporta procesos Node.js persistentes. Intentar correr Next.js acá va a fallar.</p>
+        <div class="stack" style="margin-top:12px;">
+          <span class="pill pill-red">Apache/PHP</span>
+          <span class="pill pill-red">Sin Node.js</span>
+          <span class="pill pill-red">No compatible</span>
+        </div>
+      </div>
+      <div class="card green">
+        <div class="card-title">✅ VPS (KVM)</div>
+        <h3 class="green-text">Funciona perfectamente</h3>
+        <p>El VPS da acceso root completo a Linux. Se puede instalar Docker, Node.js y PostgreSQL. El proyecto ya tiene Dockerfile listo.</p>
+        <div class="stack" style="margin-top:12px;">
+          <span class="pill pill-green">Root access</span>
+          <span class="pill pill-docker">Docker</span>
+          <span class="pill pill-pg">PostgreSQL</span>
+        </div>
+      </div>
+    </div>
+
+    <h3>Pasos para deployar en Hostinger VPS</h3>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <strong>Instalar Docker en el VPS</strong>
+          <span><code>curl -fsSL https://get.docker.com | sh</code> — instala Docker Engine y Docker Compose en un solo comando.</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <strong>Clonar el repositorio</strong>
+          <span><code>git clone https://github.com/MatiasNZamora/ZimDesk_V2.git</code> en el servidor.</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <strong>Crear el archivo .env de producción</strong>
+          <span>Copiar <code>.env.example</code> a <code>.env</code> y completar con las credenciales reales: <code>DATABASE_URL</code>, <code>NEXTAUTH_SECRET</code>, <code>MAIL_*</code>.</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <strong>Aplicar migraciones de base de datos</strong>
+          <span><code>docker compose run --rm app npx prisma migrate deploy</code></span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <strong>Levantar la app</strong>
+          <span><code>docker compose up -d</code> — levanta la app, PostgreSQL y Redis en segundo plano.</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-content">
+          <strong>Configurar Nginx como reverse proxy</strong>
+          <span>Apuntar el dominio o IP al puerto 3000 con Nginx. Opcionalmente agregar SSL con Let's Encrypt (<code>certbot</code>).</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SECCIÓN 3: ALTERNATIVAS ══════════════ -->
+  <section>
+    <h2><span class="ico">🚀</span> Alternativas de Deploy</h2>
+    <p>Comparativa de opciones según costo, complejidad y características.</p>
+
+    <div class="card" style="margin-top: 16px;">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Plataforma</th>
+            <th>Costo estimado</th>
+            <th>DB incluida</th>
+            <th>Cron Jobs</th>
+            <th>Docker</th>
+            <th>Complejidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="td-name">▲ Vercel</td>
+            <td>Gratis / ~$20/mes Pro</td>
+            <td><span class="status-no">No (externa)</span></td>
+            <td><span class="status-yes">Sí (vercel.json)</span></td>
+            <td><span class="status-no">No</span></td>
+            <td><span class="status-yes">Muy baja</span> · solo <code>git push</code></td>
+          </tr>
+          <tr>
+            <td class="td-name">🚄 Railway</td>
+            <td>~$5-15/mes</td>
+            <td><span class="status-yes">Sí (PostgreSQL)</span></td>
+            <td><span class="status-mid">Manual</span></td>
+            <td><span class="status-yes">Sí</span></td>
+            <td><span class="status-yes">Baja</span> · UI amigable</td>
+          </tr>
+          <tr>
+            <td class="td-name">🎨 Render</td>
+            <td>Gratis (lento) / ~$7/mes</td>
+            <td><span class="status-yes">Sí (PostgreSQL)</span></td>
+            <td><span class="status-yes">Sí (cron jobs)</span></td>
+            <td><span class="status-yes">Sí</span></td>
+            <td><span class="status-yes">Baja</span> · similar a Heroku</td>
+          </tr>
+          <tr>
+            <td class="td-name">🖥️ Hostinger VPS</td>
+            <td>~$5-8/mes</td>
+            <td><span class="status-yes">Sí (self-hosted)</span></td>
+            <td><span class="status-yes">Sí (crontab)</span></td>
+            <td><span class="status-yes">Sí</span></td>
+            <td><span class="status-mid">Media</span> · requiere configurar Linux</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card yellow" style="margin-top:16px; border-color: #ca8a0466;">
+      <div class="card-title">Recomendación</div>
+      <h3 style="color: var(--yellow);">Vercel para empezar, VPS cuando escale</h3>
+      <p>El proyecto ya tiene <code>vercel.json</code> con los cron jobs configurados. Vercel es la opción de menor fricción para el primer deploy. Si en el futuro se necesita más control o la DB cuesta mucho externa, migrar a un VPS con Docker es sencillo.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════ SECCIÓN 4: BUG DETECTADO ══════════════ -->
+  <section>
+    <h2><span class="ico">🐛</span> Bug Detectado — Fix Requerido</h2>
+
+    <div class="alert error">
+      <div class="alert-icon">🚨</div>
+      <div class="alert-body">
+        <strong>El Dockerfile falla sin esta configuración</strong>
+        <p>El <code>Dockerfile</code> copia <code>.next/standalone</code> en la imagen de producción, pero <code>next.config.js</code> no tiene <code>output: 'standalone'</code>. Next.js no genera esa carpeta y el build de Docker falla.</p>
+      </div>
+    </div>
+
+    <h3>Dónde está el problema</h3>
+    <div class="code-block">
+      <span class="c-comment"># Dockerfile línea 20 — copia algo que no existe sin el fix:</span><br>
+      COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+    </div>
+
+    <h3>Fix: agregar <code>output: 'standalone'</code> en next.config.js</h3>
+    <div class="code-block">
+      <span class="c-comment">// next.config.js</span><br>
+      <span class="c-key">const</span> nextConfig = {<br>
+      <span class="c-hl">  <span class="c-key">output</span>: <span class="c-str">'standalone'</span>,   <span class="c-comment">// ← esta línea faltaba</span></span><br>
+      &nbsp;&nbsp;<span class="c-key">images</span>: {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;remotePatterns: [<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ protocol: <span class="c-str">'http'</span>, hostname: <span class="c-str">'localhost'</span> },<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;],<br>
+      &nbsp;&nbsp;},<br>
+      &nbsp;&nbsp;<span class="c-key">experimental</span>: {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;serverActions: { allowedOrigins: [<span class="c-str">'localhost:3000'</span>] },<br>
+      &nbsp;&nbsp;},<br>
+      }<br><br>
+      module.exports = nextConfig
+    </div>
+
+    <div class="alert warning">
+      <div class="alert-icon">⚠️</div>
+      <div class="alert-body">
+        <strong>Sin este fix, <code>docker compose up</code> en producción fallará</strong>
+        <p>El build en modo dev (<code>npm run dev</code>) funciona igual. El problema solo aparece al construir la imagen Docker de producción.</p>
+      </div>
+    </div>
+  </section>
+
+</div><!-- /wrap -->
+</body>
+</html>

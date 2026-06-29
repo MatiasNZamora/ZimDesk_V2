@@ -8,11 +8,12 @@ declare module 'next-auth' {
       avatar: string | null
       departmentId: number
       departmentName: string
+      estructuraId: number | null
     } & DefaultSession['user']
   }
 }
 
-export type Role = 'admin' | 'agent' | 'client'
+export type Role = 'admin' | 'gerente' | 'agent' | 'client'
 
 export interface UserSession {
   id: string

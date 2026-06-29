@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { sendMail, mailTicketAssigned } from '@/lib/mail'
+import { sendWhatsApp } from '@/lib/whatsapp'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
@@ -76,7 +78,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     data: updateData,
     include: {
       creator: true,
-      agent: true,
+      agent: { select: { id: true, name: true, email: true, phone: true, whatsappKey: true } },
       priority: true,
       status: true,
     },
@@ -99,6 +101,20 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           message:  `Se te asignó el ticket #${updated.id}.`,
         },
       }).catch(console.error)
+
+      const ag = updated.agent as any
+      if (ag?.email) {
+        sendMail({
+          to: ag.email,
+          subject: `[ZimDesk] Se te asignó el ticket #${updated.id}`,
+          html: mailTicketAssigned(updated as any, ag.name, true),
+        }).catch(console.error)
+      }
+      if (ag?.phone && ag?.whatsappKey) {
+        sendWhatsApp(ag.phone, ag.whatsappKey,
+          `📋 Se te asignó el ticket #${updated.id}: "${updated.subject}"`
+        ).catch(console.error)
+      }
     }
   }
 

@@ -1,22 +1,26 @@
 'use client'
 import { useSession, signOut } from 'next-auth/react'
-import { Menu, Bell, ChevronDown, LogOut, User, Sun, Moon, Search } from 'lucide-react'
+import { Menu, Bell, ChevronDown, LogOut, User, Sun, Moon, Search, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
 import { useTheme } from '@/hooks/useTheme'
 import { useNotifications } from '@/hooks/useNotifications'
+import { useChatTotalUnread } from '@/hooks/useChat'
 import { formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 
 interface HeaderProps {
   onMenuClick: () => void
   onCmdK?: () => void
+  onChatClick?: () => void
+  chatOpen?: boolean
 }
 
-export function Header({ onMenuClick, onCmdK }: HeaderProps) {
+export function Header({ onMenuClick, onCmdK, onChatClick, chatOpen }: HeaderProps) {
   const { data: session } = useSession()
   const { theme, toggle } = useTheme()
   const { notifications, unreadCount, markAllRead, markRead } = useNotifications()
+  const chatUnread = useChatTotalUnread()
   const [userOpen, setUserOpen] = useState(false)
   const [bellOpen, setBellOpen] = useState(false)
   const userRef = useRef<HTMLDivElement>(null)
@@ -62,6 +66,23 @@ export function Header({ onMenuClick, onCmdK }: HeaderProps) {
           title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
         >
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+
+        {/* Chat */}
+        <button
+          onClick={onChatClick}
+          className={cn(
+            'relative p-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors',
+            chatOpen && 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
+          )}
+          title="Chat interno"
+        >
+          <MessageSquare size={18} />
+          {chatUnread > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+              {chatUnread > 9 ? '9+' : chatUnread}
+            </span>
+          )}
         </button>
 
         {/* Notifications */}

@@ -3,6 +3,27 @@ import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
+function slugifyHandle(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, '.')
+    .replace(/[^a-z0-9.]/g, '')
+    .replace(/\.{2,}/g, '.')
+    .replace(/^\.+|\.+$/g, '') || 'usuario'
+}
+
+async function ensureHandle(userId: number, name: string, usedHandles: Set<string>): Promise<string> {
+  let base = slugifyHandle(name)
+  let handle = base
+  let suffix = 2
+  while (usedHandles.has(handle)) handle = `${base}.${suffix++}`
+  usedHandles.add(handle)
+  await prisma.user.update({ where: { id: userId }, data: { chatHandle: handle } })
+  return handle
+}
+
 function daysAgo(n: number, offsetHours = 0): Date {
   const d = new Date()
   d.setDate(d.getDate() - n)
@@ -32,8 +53,10 @@ async function main() {
     prisma.department.upsert({ where: { id: 3 }, update: { name: 'Operaciones',      estructuraId: empresa2.id }, create: { name: 'Operaciones',      estructuraId: empresa2.id } }),
     prisma.department.upsert({ where: { id: 4 }, update: { name: 'Finanzas',         estructuraId: empresa2.id }, create: { name: 'Finanzas',         estructuraId: empresa2.id } }),
     prisma.department.upsert({ where: { id: 5 }, update: { name: 'Marketing',        estructuraId: empresa2.id }, create: { name: 'Marketing',        estructuraId: empresa2.id } }),
+    prisma.department.upsert({ where: { id: 6 }, update: { name: 'Dirección',        estructuraId: zimtech.id  }, create: { name: 'Dirección',        estructuraId: zimtech.id  } }),
+    prisma.department.upsert({ where: { id: 7 }, update: { name: 'Dirección',        estructuraId: empresa2.id }, create: { name: 'Dirección',        estructuraId: empresa2.id } }),
   ])
-  const [itDep, hrDep, opsDep, finDep, mktDep] = deps
+  const [itDep, hrDep, opsDep, finDep, mktDep, dirZimtech, dirEmpresa2] = deps
 
   // ─── ESTADOS ─────────────────────────────────────────────────
   const statuses = [
@@ -112,6 +135,18 @@ async function main() {
     where: { email: 'pedro.rojas@zimtech.com.ar' },
     update: { name: 'Pedro Rojas' },
     create: { name: 'Pedro Rojas', email: 'pedro.rojas@zimtech.com.ar', password: pass, role: 'client', departmentId: hrDep.id },
+  })
+
+  // ── GERENTES ─────────────────────────────────────────────────
+  await prisma.user.upsert({
+    where: { email: 'gerente@zimtech.com.ar' },
+    update: { name: 'Andrés Morales' },
+    create: { name: 'Andrés Morales', email: 'gerente@zimtech.com.ar', password: pass, role: 'gerente', departmentId: dirZimtech.id },
+  })
+  await prisma.user.upsert({
+    where: { email: 'gerente@empresademo.com' },
+    update: { name: 'Sofía Acuña' },
+    create: { name: 'Sofía Acuña', email: 'gerente@empresademo.com', password: pass, role: 'gerente', departmentId: dirEmpresa2.id },
   })
 
   console.log('✅ Usuarios creados')
@@ -619,6 +654,180 @@ async function main() {
     ],
   })
 
+  // ── TICKETS EXTRA — ZimTech Interna (para gerente@zimtech.com.ar) ─────
+  await crearTicket({
+    userId: cliente1.id,
+    subject: 'Solicitud de notebook para nuevo empleado — área RRHH',
+    description: 'Necesitamos una notebook para el nuevo empleado que ingresa el lunes 6 de julio al área de Recursos Humanos. Requerimientos mínimos: 16 GB RAM, SSD 512 GB, Windows 11 Pro. De ser posible el mismo modelo que tienen los demás en el área.',
+    categoryId: catInfra.id,
+    statusId: 2, // en_progreso
+    priorityId: 2, // media
+    assignedTo: agente1.id,
+    firstResponseAt: daysAgo(0, -2),
+    createdAt: daysAgo(1, 1),
+    logs: [
+      { userId: cliente1.id, action: 'Cliente Demo creó el ticket "Solicitud de notebook para nuevo empleado — área RRHH".', createdAt: daysAgo(1, 1) },
+      { userId: admin.id, action: 'Matías Zamora asignó el ticket al agente Lucas Herrera.', createdAt: daysAgo(0, 5) },
+      { userId: agente1.id, action: 'Lucas Herrera respondió al ticket.', createdAt: daysAgo(0, -2) },
+    ],
+    mensajes: [
+      {
+        userId: agente1.id,
+        message: 'Hola. Voy a verificar el stock de equipos disponibles. Si no hay en stock, el tiempo de entrega estimado con nuestro proveedor es de 3 días hábiles. Te confirmo antes del mediodía.',
+        createdAt: daysAgo(0, -2),
+      },
+    ],
+  })
+
+  const ticketConformidad = await crearTicket({
+    userId: cliente5.id,
+    subject: 'Problema al iniciar sesión en el portal de empleados',
+    description: 'No puedo acceder al portal de empleados de RRHH desde hace dos días. Ingreso mis credenciales y aparece el mensaje "Sesión expirada, intente nuevamente" inmediatamente. Probé desde distintos navegadores y equipos con el mismo resultado.',
+    categoryId: catAcceso.id,
+    statusId: 5, // resuelto  ← cliente puede dar conformidad
+    priorityId: 3, // alta
+    assignedTo: agente2.id,
+    firstResponseAt: daysAgo(4, -1),
+    createdAt: daysAgo(5),
+    logs: [
+      { userId: cliente5.id, action: 'Pedro Rojas creó el ticket "Problema al iniciar sesión en el portal de empleados".', createdAt: daysAgo(5) },
+      { userId: admin.id, action: 'Matías Zamora asignó el ticket a la agente Valentina Torres.', createdAt: daysAgo(4, 8) },
+      { userId: agente2.id, action: 'Valentina Torres marcó el ticket como Resuelto.', createdAt: daysAgo(3, 3) },
+    ],
+    mensajes: [
+      {
+        userId: agente2.id,
+        message: 'Hola Pedro. El problema era que tu token de sesión en la base de datos había quedado corrompido por una actualización del servidor. Lo limpié y restablecí tu acceso. Podés intentar ingresar ahora con tus credenciales habituales.',
+        createdAt: daysAgo(4, -1),
+      },
+      {
+        userId: cliente5.id,
+        message: 'Perfecto, ya pude ingresar sin problema. Muchas gracias por la resolución rápida.',
+        createdAt: daysAgo(3, 5),
+      },
+    ],
+  })
+
+  await crearTicket({
+    userId: cliente1.id,
+    subject: 'Error al exportar reportes en el sistema de RRHH',
+    description: 'Al intentar exportar el reporte mensual de asistencia en formato Excel desde el sistema de RRHH, el archivo se descarga vacío (0 KB). El PDF sí funciona correctamente. El problema empezó con la última actualización del sistema.',
+    categoryId: catSoporte.id,
+    statusId: 6, // cerrado
+    priorityId: 2, // media
+    assignedTo: agente1.id,
+    firstResponseAt: daysAgo(15, -2),
+    closedAt: daysAgo(13, 4),
+    createdAt: daysAgo(16),
+    logs: [
+      { userId: cliente1.id, action: 'Cliente Demo creó el ticket "Error al exportar reportes en el sistema de RRHH".', createdAt: daysAgo(16) },
+      { userId: admin.id, action: 'Matías Zamora asignó el ticket al agente Lucas Herrera.', createdAt: daysAgo(15, 8) },
+      { userId: agente1.id, action: 'Lucas Herrera cerró el ticket.', createdAt: daysAgo(13, 4) },
+    ],
+    mensajes: [
+      {
+        userId: agente1.id,
+        message: 'Hola. El bug estaba en la librería de generación de Excel que se actualizó sin compatibilidad retroactiva. Apliqué el parche del proveedor. Ya podés exportar normalmente.',
+        createdAt: daysAgo(15, -2),
+      },
+      { userId: cliente1.id, message: 'Perfecto, funciona. Gracias!', createdAt: daysAgo(13, 5) },
+    ],
+  })
+
+  // ── TICKETS EXTRA — Empresa Demo SA (para gerente@empresademo.com) ──────
+  await crearTicket({
+    userId: cliente2.id,
+    subject: 'El módulo de pedidos no guarda cambios al editar',
+    description: 'Al editar un pedido existente en el módulo de Operaciones (sistema interno ERP), al hacer clic en "Guardar" la página se recarga pero los cambios no se persisten. El problema ocurre solo con pedidos de más de 10 ítems. Los pedidos nuevos se crean sin problema.',
+    categoryId: catSoporte.id,
+    statusId: 4, // respuesta_cliente
+    priorityId: 4, // urgente
+    assignedTo: agente1.id,
+    firstResponseAt: daysAgo(0, -3),
+    createdAt: daysAgo(1, 2),
+    logs: [
+      { userId: cliente2.id, action: 'María González creó el ticket "El módulo de pedidos no guarda cambios al editar".', createdAt: daysAgo(1, 2) },
+      { userId: admin.id, action: 'Matías Zamora asignó el ticket al agente Lucas Herrera con prioridad Urgente.', createdAt: daysAgo(1, 0) },
+      { userId: agente1.id, action: 'Lucas Herrera respondió al ticket.', createdAt: daysAgo(0, -3) },
+      { userId: cliente2.id, action: 'María González respondió al ticket.', createdAt: daysAgo(0, -1) },
+    ],
+    mensajes: [
+      {
+        userId: agente1.id,
+        message: 'Hola María. Para reproducir el problema, necesito que me pases:\n1. El número de algún pedido que falla\n2. Los navegador y versión que usás\n3. Si hay algún mensaje de error en la consola del navegador (F12 → Consola)\n\nLo estoy investigando en el entorno de testing. Lucas',
+        createdAt: daysAgo(0, -3),
+      },
+      {
+        userId: cliente2.id,
+        message: 'El pedido #PED-2026-1089 falla siempre. Usamos Chrome 126. En la consola dice: "Payload Too Large 413". Espero que ayude.',
+        createdAt: daysAgo(0, -1),
+      },
+    ],
+  })
+
+  await crearTicket({
+    userId: cliente3.id,
+    subject: 'Acceso a Power BI bloqueado para el equipo de Finanzas',
+    description: 'Desde el lunes, ningún usuario del equipo de Finanzas puede acceder a los dashboards de Power BI. La página carga pero muestra "No tenés licencia para ver este contenido". Somos 5 usuarios afectados: carlos.mendez, paula.suarez, roberto.diaz, ana.perez y juan.lopez.',
+    categoryId: catAcceso.id,
+    statusId: 2, // en_progreso
+    priorityId: 3, // alta
+    assignedTo: agente2.id,
+    firstResponseAt: daysAgo(2, -4),
+    createdAt: daysAgo(3, 1),
+    logs: [
+      { userId: cliente3.id, action: 'Carlos Méndez creó el ticket "Acceso a Power BI bloqueado para el equipo de Finanzas".', createdAt: daysAgo(3, 1) },
+      { userId: admin.id, action: 'Matías Zamora asignó el ticket a la agente Valentina Torres.', createdAt: daysAgo(2, 9) },
+      { userId: agente2.id, action: 'Valentina Torres respondió al ticket.', createdAt: daysAgo(2, -4) },
+    ],
+    mensajes: [
+      {
+        userId: agente2.id,
+        message: 'Hola Carlos. Ya identifiqué el problema: las licencias de Power BI Pro del equipo de Finanzas no fueron renovadas en el ciclo de facturación de julio. Estoy coordinando con el área de compras para activarlas. El tiempo estimado es de 24-48 horas hábiles. Valentina',
+        createdAt: daysAgo(2, -4),
+      },
+    ],
+  })
+
+  await crearTicket({
+    userId: cliente4.id,
+    subject: 'Solicitud de integración Mailchimp ↔ CRM',
+    description: 'Necesitamos integrar nuestro CRM interno con Mailchimp para sincronizar automáticamente los contactos nuevos. Actualmente lo hacemos en forma manual (exportar CSV → importar en Mailchimp), lo que nos genera trabajo extra y errores.\n\nEstimado de contactos nuevos por mes: ~200. La integración debería sincronizar nombre, email, empresa y segmento.',
+    categoryId: catConsultas.id,
+    statusId: 1, // abierto
+    priorityId: 2, // media
+    createdAt: daysAgo(0, 2),
+    logs: [
+      { userId: cliente4.id, action: 'Lucía Fernández creó el ticket "Solicitud de integración Mailchimp ↔ CRM".', createdAt: daysAgo(0, 2) },
+    ],
+  })
+
+  await crearTicket({
+    userId: cliente3.id,
+    subject: 'Discrepancia en reporte de ventas de mayo — totales incorrectos',
+    description: 'El reporte de ventas de mayo del sistema muestra $2.340.000 pero el balance manual que preparamos muestra $2.218.500. La diferencia es de $121.500. Sospechamos que hay transacciones duplicadas o que alguna devolución no fue registrada correctamente.',
+    categoryId: catFacturacion.id,
+    statusId: 6, // cerrado
+    priorityId: 3, // alta
+    assignedTo: agente2.id,
+    firstResponseAt: daysAgo(25, -2),
+    closedAt: daysAgo(22, 5),
+    createdAt: daysAgo(26),
+    logs: [
+      { userId: cliente3.id, action: 'Carlos Méndez creó el ticket "Discrepancia en reporte de ventas de mayo".', createdAt: daysAgo(26) },
+      { userId: admin.id, action: 'Matías Zamora asignó el ticket a la agente Valentina Torres.', createdAt: daysAgo(25, 9) },
+      { userId: agente2.id, action: 'Valentina Torres cerró el ticket.', createdAt: daysAgo(22, 5) },
+    ],
+    mensajes: [
+      {
+        userId: agente2.id,
+        message: 'Hola Carlos. Encontré el problema: la devolución #DEV-2026-0091 del 28 de mayo fue registrada dos veces en el sistema por un error de doble clic al guardar. Eliminé el duplicado y el total cuadra ahora: $2.218.500. Valentina',
+        createdAt: daysAgo(25, -2),
+      },
+      { userId: cliente3.id, message: 'Confirmado, los números cuadran. Gracias!', createdAt: daysAgo(22, 6) },
+    ],
+  })
+
   // ── ADJUNTOS DE DEMO ────────────────────────────────────────
   await adjuntar(ticketVpn.id, [
     { name: 'captura-error-vpn.png', type: 'image/png', size: 284210 },
@@ -646,23 +855,54 @@ async function main() {
   await adjuntar(ticketTeams.id, [
     { name: 'captura-teams-historial.png', type: 'image/png', size: 298496 },
   ])
+  await adjuntar(ticketConformidad.id, [
+    { name: 'captura-portal-error.png', type: 'image/png', size: 198400 },
+  ])
 
   console.log('✅ Tickets de demo creados')
   console.log('')
-  console.log('─────────────────────────────────────────')
+  console.log('══════════════════════════════════════════════════════════')
   console.log('  Usuarios disponibles para testing:')
-  console.log('─────────────────────────────────────────')
-  console.log('  ADMIN   admin@zimtech.com.ar         → zimdesk2026')
-  console.log('  AGENTE  agente@zimtech.com.ar         → zimdesk2026')
-  console.log('  AGENTE  soporte@zimtech.com.ar        → zimdesk2026')
-  console.log('  CLIENTE cliente@zimtech.com.ar        → zimdesk2026')
-  console.log('  CLIENTE maria.gonzalez@zimtech.com.ar → zimdesk2026')
-  console.log('  CLIENTE carlos.mendez@zimtech.com.ar  → zimdesk2026')
-  console.log('  CLIENTE lucia.fernandez@zimtech.com.ar→ zimdesk2026')
-  console.log('  CLIENTE pedro.rojas@zimtech.com.ar    → zimdesk2026')
-  console.log('─────────────────────────────────────────')
-  console.log('  Total tickets: 15 (todos los estados)')
-  console.log('─────────────────────────────────────────')
+  console.log('══════════════════════════════════════════════════════════')
+  console.log('  ADMIN    admin@zimtech.com.ar              → zimdesk2026')
+  console.log('           Ve todo · gestiona usuarios y sistema')
+  console.log('')
+  console.log('  GERENTE  gerente@zimtech.com.ar            → zimdesk2026')
+  console.log('           Ve tickets de ZimTech Interna (IT + RRHH + Dir)')
+  console.log('')
+  console.log('  GERENTE  gerente@empresademo.com           → zimdesk2026')
+  console.log('           Ve tickets de Empresa Demo SA (Ops + Fin + Mkt + Dir)')
+  console.log('')
+  console.log('  AGENTE   agente@zimtech.com.ar             → zimdesk2026')
+  console.log('           Lucas Herrera — ve sus tickets asignados')
+  console.log('')
+  console.log('  AGENTE   soporte@zimtech.com.ar            → zimdesk2026')
+  console.log('           Valentina Torres — ve sus tickets asignados')
+  console.log('')
+  console.log('  CLIENTE  cliente@zimtech.com.ar            → zimdesk2026')
+  console.log('           Cliente Demo — Dep. RRHH (ZimTech Interna)')
+  console.log('')
+  console.log('  CLIENTE  pedro.rojas@zimtech.com.ar        → zimdesk2026')
+  console.log('           Pedro Rojas — tiene ticket RESUELTO para dar conformidad')
+  console.log('')
+  console.log('  CLIENTE  maria.gonzalez@zimtech.com.ar     → zimdesk2026')
+  console.log('  CLIENTE  carlos.mendez@zimtech.com.ar      → zimdesk2026')
+  console.log('  CLIENTE  lucia.fernandez@zimtech.com.ar    → zimdesk2026')
+  console.log('           Empresa Demo SA (Ops / Finanzas / Marketing)')
+  console.log('══════════════════════════════════════════════════════════')
+  console.log('  Total tickets: ~22 distribuidos en todos los estados')
+  console.log('══════════════════════════════════════════════════════════')
+
+  // ─── @HANDLES DE CHAT ────────────────────────────────────────────────────
+  const allUsers = await prisma.user.findMany({ select: { id: true, name: true, chatHandle: true } })
+  const usedHandles = new Set<string>(allUsers.map(u => u.chatHandle).filter(Boolean) as string[])
+
+  for (const u of allUsers) {
+    if (!u.chatHandle) {
+      await ensureHandle(u.id, u.name, usedHandles)
+    }
+  }
+  console.log('✅ @handles de chat generados')
 }
 
 main().catch(console.error).finally(() => prisma.$disconnect())

@@ -17,8 +17,12 @@ export async function GET(req: NextRequest) {
   const end   = new Date(year, month, 0, 23, 59, 59, 999)
 
   const whereBase: any = { createdAt: { gte: start, lte: end } }
-  if (role === 'client') whereBase.userId    = userId
-  if (role === 'agent')  whereBase.assignedTo = userId
+  if (role === 'client')  whereBase.userId     = userId
+  if (role === 'agent')   whereBase.assignedTo = userId
+  if (role === 'gerente') {
+    const estructuraId = session.user.estructuraId
+    if (estructuraId) whereBase.creator = { department: { estructuraId } }
+  }
 
   // ── Conteos por estado, categoría y prioridad usando groupBy (sin cargar filas) ──
   const [byStatus, byCategory, byPriority, statuses, categories, priorities, total] = await Promise.all([

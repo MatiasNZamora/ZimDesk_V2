@@ -5,10 +5,11 @@ import { useSession } from 'next-auth/react'
 import { Suspense } from 'react'
 import { cn } from '@/lib/utils'
 import {
-  LayoutDashboard, Ticket, PlusCircle, Users, Building2,
-  Tag, HelpCircle, FileText, CheckSquare, Settings, X,
+  LayoutDashboard, Ticket, PlusCircle, Users, Building2, Layers,
+  Tag, HelpCircle, FileText, CheckSquare, Settings, Settings2, X,
   ClipboardList, BarChart2,
 } from 'lucide-react'
+import { useAppConfig } from '@/lib/useAppConfig'
 
 interface NavItem {
   href: string
@@ -19,7 +20,8 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: '/dashboard',              label: 'Dashboard',            icon: LayoutDashboard, roles: ['admin', 'agent', 'client'], section: 'General' },
+  { href: '/dashboard',              label: 'Dashboard',            icon: LayoutDashboard, roles: ['admin', 'gerente', 'agent', 'client'], section: 'General' },
+  { href: '/tickets?view=empresa',   label: 'Tickets de mi empresa',icon: Ticket,          roles: ['gerente'], section: 'Supervisión' },
   { href: '/tickets/create',         label: 'Nuevo Ticket',         icon: PlusCircle,      roles: ['client'], section: 'Tickets' },
   { href: '/tickets',                label: 'Mis Tickets',          icon: Ticket,          roles: ['client'] },
   { href: '/tickets?view=asignados', label: 'Mis Asignados',        icon: ClipboardList,   roles: ['agent'], section: 'Tickets' },
@@ -27,12 +29,13 @@ const navItems: NavItem[] = [
   { href: '/tickets?view=conformidad',label: 'Conformidad',         icon: CheckSquare,     roles: ['admin'] },
   { href: '/users',                  label: 'Usuarios',             icon: Users,           roles: ['admin'], section: 'Mantenimiento' },
   { href: '/estructuras',            label: 'Estructuras',          icon: Building2,       roles: ['admin'] },
-  { href: '/departments',            label: 'Departamentos',        icon: Building2,       roles: ['admin'] },
+  { href: '/departments',            label: 'Departamentos',        icon: Layers,          roles: ['admin'] },
   { href: '/categories',             label: 'Categorías',           icon: Tag,             roles: ['admin'] },
   { href: '/faqs',                   label: 'FAQs',                 icon: HelpCircle,      roles: ['admin'] },
   { href: '/platform-norms',         label: 'Normas de Plataforma', icon: FileText,        roles: ['admin'] },
-  { href: '/reports',                 label: 'Auditoría',            icon: BarChart2,       roles: ['admin'] },
-  { href: '/faqs',                   label: 'Preguntas Frecuentes', icon: HelpCircle,      roles: ['agent', 'client'], section: 'Ayuda' },
+  { href: '/reports',                label: 'Auditoría',            icon: BarChart2,       roles: ['admin'] },
+  { href: '/settings',               label: 'Configuración',        icon: Settings2,       roles: ['admin'] },
+  { href: '/faqs',                   label: 'Preguntas Frecuentes', icon: HelpCircle,      roles: ['agent', 'client', 'gerente'], section: 'Ayuda' },
 ]
 
 interface SidebarProps {
@@ -45,6 +48,10 @@ function SidebarNav({ open, onClose }: SidebarProps) {
   const searchParams = useSearchParams()
   const { data: session } = useSession()
   const role = session?.user?.role ?? 'client'
+  const { data: cfg } = useAppConfig()
+  const appName = cfg?.app_name ?? 'ZimDesk'
+  const logoUrl = cfg?.logo_url ?? ''
+  const footerText = cfg?.footer_text ?? 'ZimDesk v2 · ZimTech'
 
   const visibleItems = navItems.filter(item => item.roles.includes(role))
 
@@ -89,10 +96,13 @@ function SidebarNav({ open, onClose }: SidebarProps) {
         {/* Logo */}
         <div className="flex items-center justify-between h-16 px-5 border-b border-sidebar-border shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">Z</span>
+            <div className={`w-8 h-8 flex items-center justify-center overflow-hidden shrink-0 ${logoUrl ? '' : 'bg-indigo-600 rounded-lg'}`}>
+              {logoUrl
+                ? <img src={logoUrl} alt={appName} className="w-8 h-8 object-contain" />
+                : <span className="text-white font-bold text-sm">{appName[0]}</span>
+              }
             </div>
-            <span className="text-white font-bold text-lg tracking-tight">ZimDesk</span>
+            <span className="text-white font-bold text-lg tracking-tight">{appName}</span>
           </div>
           <button onClick={onClose} className="lg:hidden text-slate-400 hover:text-white p-1">
             <X size={18} />
@@ -130,7 +140,7 @@ function SidebarNav({ open, onClose }: SidebarProps) {
         </nav>
 
         <div className="px-4 py-4 border-t border-sidebar-border shrink-0">
-          <p className="text-xs text-slate-600">ZimDesk v2 · ZimTech</p>
+          <p className="text-xs text-slate-600">{footerText}</p>
         </div>
       </aside>
     </>

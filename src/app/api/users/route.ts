@@ -72,6 +72,8 @@ export async function GET(req: NextRequest) {
         role: true,
         avatar: true,
         active: true,
+        phone: true,
+        whatsappKey: true,
         createdAt: true,
         department: { select: { id: true, name: true, estructura: { select: { id: true, name: true } } } },
       },

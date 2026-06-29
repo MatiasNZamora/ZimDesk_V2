@@ -42,7 +42,7 @@
   .form-textarea { @apply form-input resize-y min-h-[100px]; }
   .form-error   { @apply text-xs text-red-600 mt-1; }
 
-  .badge { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold; }
+  .badge { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap; }
 
   .table-container { @apply overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700; }
   .table { @apply w-full text-sm; }

@@ -20,7 +20,7 @@ export const authOptions: NextAuthOptions = {
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
-          include: { department: true },
+          include: { department: { include: { estructura: true } } },
         })
 
         if (!user || !(await bcrypt.compare(credentials.password, user.password))) return null
@@ -33,6 +33,7 @@ export const authOptions: NextAuthOptions = {
           avatar:         user.avatar,
           departmentId:   user.departmentId,
           departmentName: user.department.name,
+          estructuraId:   user.department.estructuraId ?? null,
           tokenVersion:   user.tokenVersion,
         }
       },
@@ -47,6 +48,7 @@ export const authOptions: NextAuthOptions = {
         token.avatar         = (user as any).avatar
         token.departmentId   = (user as any).departmentId
         token.departmentName = (user as any).departmentName
+        token.estructuraId   = (user as any).estructuraId
         token.tokenVersion   = (user as any).tokenVersion
         token.lastCheckedAt  = Date.now()
         return token
@@ -64,7 +66,7 @@ export const authOptions: NextAuthOptions = {
           select: {
             id: true, name: true, role: true, avatar: true,
             tokenVersion: true, departmentId: true,
-            department: { select: { name: true } },
+            department: { select: { name: true, estructuraId: true } },
           },
         })
 
@@ -79,6 +81,7 @@ export const authOptions: NextAuthOptions = {
         token.avatar         = dbUser.avatar
         token.departmentId   = dbUser.departmentId
         token.departmentName = dbUser.department.name
+        token.estructuraId   = dbUser.department.estructuraId ?? null
         token.tokenVersion   = dbUser.tokenVersion
         token.lastCheckedAt  = Date.now()
       } catch {
@@ -95,6 +98,7 @@ export const authOptions: NextAuthOptions = {
         session.user.avatar         = token.avatar as string | null
         session.user.departmentId   = token.departmentId as number
         session.user.departmentName = token.departmentName as string
+        session.user.estructuraId   = token.estructuraId as number | null
       }
       return session
     },

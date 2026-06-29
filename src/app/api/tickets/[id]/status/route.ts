@@ -4,23 +4,25 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 const ACTION_SLUG: Record<string, string> = {
-  cerrar:          'cerrado',
-  reabrir:         'abierto',
-  cancelar:        'cancelado',
-  marcar_resuelto: 'resuelto',
-  tomar:           'en_progreso',       // agente se auto-asigna
-  en_espera:       'en_espera_cliente', // poner en espera del cliente
-  reactivar:       'en_progreso',       // volver a progreso desde estado de espera
+  cerrar:            'cerrado',
+  reabrir:           'abierto',
+  cancelar:          'cancelado',
+  marcar_resuelto:   'resuelto',
+  tomar:             'en_progreso',
+  en_espera:         'en_espera_cliente',
+  reactivar:         'en_progreso',
+  dar_conformidad:   'cerrado',         // cliente confirma que la solución es satisfactoria
 }
 
 const ACTION_LABEL: Record<string, string> = {
-  cerrar:          'cerró',
-  reabrir:         'reabrió',
-  cancelar:        'canceló',
-  marcar_resuelto: 'marcó como resuelto',
-  tomar:           'tomó',
-  en_espera:       'puso en espera del cliente',
-  reactivar:       'reactivó',
+  cerrar:            'cerró',
+  reabrir:           'reabrió',
+  cancelar:          'canceló',
+  marcar_resuelto:   'marcó como resuelto',
+  tomar:             'tomó',
+  en_espera:         'puso en espera del cliente',
+  reactivar:         'reactivó',
+  dar_conformidad:   'dio conformidad y cerró',
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -48,6 +50,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (action === 'tomar'           && role !== 'agent')                   return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
   if (action === 'en_espera'       && !['admin', 'agent'].includes(role)) return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
   if (action === 'reactivar'       && !['admin', 'agent'].includes(role)) return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
+  if (action === 'dar_conformidad' && role !== 'client')                  return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
+  if (action === 'dar_conformidad' && ticket.status.slug !== 'resuelto')  return NextResponse.json({ error: 'Solo se puede dar conformidad a tickets resueltos' }, { status: 422 })
 
   const targetStatus = await prisma.status.findUnique({ where: { slug: targetSlug } })
   if (!targetStatus) return NextResponse.json({ error: `Estado "${targetSlug}" no existe` }, { status: 500 })
@@ -82,13 +86,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   const msgMap: Record<string, string> = {
-    cerrar:          `El ticket #${ticket.id} fue cerrado.`,
-    reabrir:         `El ticket #${ticket.id} fue reabierto.`,
-    cancelar:        `El ticket #${ticket.id} fue cancelado.`,
-    marcar_resuelto: `El ticket #${ticket.id} fue marcado como resuelto.`,
-    tomar:           `Tu ticket #${ticket.id} fue tomado por ${userName}.`,
-    en_espera:       `El ticket #${ticket.id} está en espera de tu respuesta.`,
-    reactivar:       `El agente retomó el trabajo en el ticket #${ticket.id}.`,
+    cerrar:            `El ticket #${ticket.id} fue cerrado.`,
+    reabrir:           `El ticket #${ticket.id} fue reabierto.`,
+    cancelar:          `El ticket #${ticket.id} fue cancelado.`,
+    marcar_resuelto:   `El ticket #${ticket.id} fue marcado como resuelto.`,
+    tomar:             `Tu ticket #${ticket.id} fue tomado por ${userName}.`,
+    en_espera:         `El ticket #${ticket.id} está en espera de tu respuesta.`,
+    reactivar:         `El agente retomó el trabajo en el ticket #${ticket.id}.`,
+    dar_conformidad:   `El cliente dio conformidad al ticket #${ticket.id}. Ticket cerrado.`,
   }
 
   if (notifyUserId) {

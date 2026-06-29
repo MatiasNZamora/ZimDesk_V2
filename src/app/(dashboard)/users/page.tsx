@@ -15,8 +15,10 @@ const schema = z.object({
   name: z.string().min(2, 'Mínimo 2 caracteres'),
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'Mínimo 6 caracteres').optional().or(z.literal('')),
-  role: z.enum(['admin', 'agent', 'client']),
+  role: z.enum(['admin', 'gerente', 'agent', 'client']),
   departmentId: z.coerce.number().int().positive('Seleccioná un departamento'),
+  phone: z.string().optional().or(z.literal('')),
+  whatsappKey: z.string().optional().or(z.literal('')),
 })
 type FormValues = z.infer<typeof schema>
 
@@ -88,7 +90,7 @@ export default function UsersPage() {
   function openCreate() {
     setEditing(null)
     setSelectedEstructura('')
-    reset({ name: '', email: '', password: '', role: 'client', departmentId: 0 })
+    reset({ name: '', email: '', password: '', role: 'client', departmentId: 0, phone: '', whatsappKey: '' })
     setModalOpen(true)
   }
 
@@ -96,7 +98,7 @@ export default function UsersPage() {
     setEditing(user)
     const estructId = user.department?.estructura?.id
     setSelectedEstructura(estructId ? String(estructId) : '')
-    reset({ name: user.name, email: user.email, password: '', role: user.role, departmentId: user.department?.id })
+    reset({ name: user.name, email: user.email, password: '', role: user.role, departmentId: user.department?.id, phone: user.phone ?? '', whatsappKey: user.whatsappKey ?? '' })
     setModalOpen(true)
   }
 
@@ -255,6 +257,7 @@ export default function UsersPage() {
             <select {...register('role')} className="form-select">
               <option value="client">Cliente</option>
               <option value="agent">Agente</option>
+              <option value="gerente">Gerente</option>
               <option value="admin">Admin</option>
             </select>
           </div>
@@ -277,6 +280,16 @@ export default function UsersPage() {
                 ))}
               </select>
               {errors.departmentId && <p className="form-error">{errors.departmentId.message}</p>}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="form-label">Teléfono WhatsApp (opcional)</label>
+              <input {...register('phone')} className="form-input" placeholder="+54911..." />
+            </div>
+            <div>
+              <label className="form-label">API Key Callmebot</label>
+              <input {...register('whatsappKey')} className="form-input" placeholder="123456" />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">

@@ -51,7 +51,7 @@ function TicketsContent() {
 
   // Vista: puede venir de la URL (?view=gestion) o calcularse del rol
   const viewFromUrl = searchParamsObj.get('view')
-  const defaultView = role === 'agent' ? 'asignados' : role === 'admin' ? 'gestion' : 'mine'
+  const defaultView = role === 'agent' ? 'asignados' : role === 'admin' ? 'gestion' : role === 'gerente' ? 'empresa' : 'mine'
   const view = viewFromUrl ?? defaultView
 
   const { data, isLoading } = useQuery<PaginatedResponse<TicketWithRelations>>({
@@ -84,12 +84,13 @@ function TicketsContent() {
 
   const pageTitle =
     view === 'conformidad' ? 'Conformidad'
-    : role === 'admin' ? 'Gestión de Tickets'
-    : role === 'agent' ? 'Mis Tickets Asignados'
+    : role === 'admin'   ? 'Gestión de Tickets'
+    : role === 'agent'   ? 'Mis Tickets Asignados'
+    : role === 'gerente' ? 'Tickets de mi empresa'
     : 'Mis Tickets'
 
   // Columnas dinámicas según rol
-  const colCount = 6 + (role !== 'client' ? 1 : 0) + (role === 'admin' ? 1 : 0)
+  const colCount = 6 + (role !== 'client' ? 1 : 0) + (['admin', 'gerente'].includes(role ?? '') ? 1 : 0)
 
   return (
     <div className="space-y-5">
@@ -166,9 +167,9 @@ function TicketsContent() {
                     <th>Estado</th>
                     <th>Prioridad</th>
                     {role !== 'client' && <th>Creador</th>}
-                    {role === 'admin' && <th>Agente</th>}
+                    {['admin', 'gerente'].includes(role ?? '') && <th>Agente</th>}
                     <th>Fecha</th>
-                    <th className="w-8"></th>
+                    <th className="w-10 !px-2"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -230,7 +231,7 @@ function TicketsContent() {
                           </div>
                         </td>
                       )}
-                      {role === 'admin' && (
+                      {['admin', 'gerente'].includes(role ?? '') && (
                         <td>
                           {ticket.agent ? (
                             <div className="flex items-center gap-2">
@@ -252,7 +253,7 @@ function TicketsContent() {
                           {timeAgo(ticket.createdAt)}
                         </span>
                       </td>
-                      <td className="align-middle" onClick={e => e.stopPropagation()}>
+                      <td className="align-middle !px-2 !pr-3" onClick={e => e.stopPropagation()}>
                         <Link
                           href={`/tickets/${ticket.id}`}
                           className="inline-flex items-center justify-center w-7 h-7 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:text-indigo-400 dark:hover:bg-indigo-900/20 transition-colors"

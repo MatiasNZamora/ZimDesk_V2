@@ -23,14 +23,25 @@ model User {
   logs            Log[]
   resetTokens     PasswordResetToken[]
   notifications   Notification[]
+  phone           String?
+  whatsappKey     String?
+  chatHandle      String?    @unique
+  lastSeen        DateTime?
   active          Boolean    @default(true)
   tokenVersion    Int        @default(0)
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
+  chatConversations     ChatConversation[]  @relation("ChatCreator")
+  chatParticipations    ChatParticipant[]
+  chatMessagesSent      ChatMessage[]       @relation("ChatSender")
+  chatReactions         ChatReaction[]
+  chatMessagesRead      ChatMessageRead[]
+
   @@index([email])
   @@index([role])
   @@index([departmentId])
+  @@index([chatHandle])
 }
 
 model PasswordResetToken {
@@ -48,6 +59,7 @@ model PasswordResetToken {
 
 enum Role {
   admin
+  gerente
   agent
   client
 }
@@ -211,4 +223,101 @@ model PlatformNorm {
   content   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model AppConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+// ─── CHAT INTERNO ─────────────────────────────────────────────────────────────
+
+model ChatConversation {
+  id           Int      @id @default(autoincrement())
+  type         String   // 'direct' | 'group'
+  name         String?
+  avatarUrl    String?
+  createdById  Int
+  pinnedMsgId  Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  createdBy    User              @relation("ChatCreator", fields: [createdById], references: [id])
+  participants ChatParticipant[]
+  messages     ChatMessage[]
+
+  @@index([updatedAt])
+}
+
+model ChatParticipant {
+  id             Int       @id @default(autoincrement())
+  conversationId Int
+  userId         Int
+  status         String    // 'pending' | 'active' | 'declined' | 'left'
+  muted          Boolean   @default(false)
+  archived       Boolean   @default(false)
+  joinedAt       DateTime?
+  lastReadAt     DateTime?
+
+  conversation  ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user          User             @relation(fields: [userId], references: [id])
+
+  @@unique([conversationId, userId])
+  @@index([userId, status])
+}
+
+model ChatMessage {
+  id             Int       @id @default(autoincrement())
+  conversationId Int
+  senderId       Int
+  content        String?
+  replyToId      Int?
+  pinned         Boolean   @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  conversation  ChatConversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender        User              @relation("ChatSender", fields: [senderId], references: [id])
+  replyTo       ChatMessage?      @relation("Reply", fields: [replyToId], references: [id])
+  replies       ChatMessage[]     @relation("Reply")
+  attachments   ChatAttachment[]
+  reactions     ChatReaction[]
+  readBy        ChatMessageRead[]
+
+  @@index([conversationId, createdAt])
+}
+
+model ChatAttachment {
+  id        Int    @id @default(autoincrement())
+  messageId Int
+  fileName  String
+  filePath  String
+  fileType  String
+  fileSize  Int
+
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+}
+
+model ChatReaction {
+  messageId Int
+  userId    Int
+  emoji     String
+  createdAt DateTime @default(now())
+
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id])
+
+  @@id([messageId, userId, emoji])
+}
+
+model ChatMessageRead {
+  messageId Int
+  userId    Int
+  readAt    DateTime @default(now())
+
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id])
+
+  @@id([messageId, userId])
 }

@@ -8,6 +8,7 @@ import { sendMail, mailTicketCreated } from '@/lib/mail'
 import { rateLimit, getClientIp } from '@/lib/rateLimit'
 import { ALLOWED_MIME } from '@/lib/utils'
 import { sanitizeMessage } from '@/lib/sanitize'
+import { notifyAdminsWhatsApp } from '@/lib/whatsapp'
 import { getRealMime } from '@/lib/mime'
 import { z } from 'zod'
 
@@ -39,6 +40,9 @@ export async function GET(req: NextRequest) {
 
   if (role === 'client') {
     where.userId = userId
+  } else if (role === 'gerente') {
+    const estructuraId = session.user.estructuraId
+    if (estructuraId) where.creator = { department: { estructuraId } }
   } else if (role === 'agent' && view === 'asignados') {
     where.assignedTo = userId
   } else if (role === 'admin' && view === 'conformidad') {
@@ -177,6 +181,10 @@ export async function POST(req: NextRequest) {
       html: mailTicketCreated(ticket as any),
     }).catch(console.error)
   }
+
+  notifyAdminsWhatsApp(
+    `🎫 Nuevo ticket #${ticket.id}\n📌 ${subject}\n👤 ${ticket.creator.name}`
+  )
 
   return NextResponse.json({ message: 'Ticket creado exitosamente', id: ticket.id }, { status: 201 })
 }
