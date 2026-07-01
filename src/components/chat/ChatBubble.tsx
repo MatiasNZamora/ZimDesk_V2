@@ -31,7 +31,7 @@ function formatShort(iso: string) {
   return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })
 }
 
-function ReadReceipts({ msg, convType, totalActive, myId }: { msg: ChatMessage; convType: string; totalActive: number; myId: number }) {
+function ReadReceipts({ msg, totalActive, myId }: { msg: ChatMessage; totalActive: number; myId: number }) {
   if (msg.sender.id !== myId) return null
   const readByOthers = msg.readBy.filter(r => r.userId !== myId)
   const allRead = readByOthers.length >= totalActive - 1
@@ -61,9 +61,7 @@ function FileAttachment({ att }: { att: { fileName: string; filePath: string; fi
 // ===========================================================================
 // ConversationList
 // ===========================================================================
-function ConversationList({
-  onSelect, onNewChat,
-}: { onSelect: (id: number) => void; onNewChat: () => void }) {
+function ConversationList({ onSelect, onNewChat }: { onSelect: (id: number) => void; onNewChat: () => void }) {
   const { data: session } = useSession()
   const myId = Number(session?.user?.id)
   const [tab, setTab] = useState<'all' | 'pending'>('all')
@@ -81,7 +79,6 @@ function ConversationList({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
         <h3 className="font-semibold text-slate-800 dark:text-slate-100 text-sm">Mensajes</h3>
         <button onClick={onNewChat}
@@ -91,7 +88,6 @@ function ConversationList({
         </button>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 px-4 pb-2 shrink-0">
         {(['all', 'pending'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
@@ -109,7 +105,6 @@ function ConversationList({
         ))}
       </div>
 
-      {/* List */}
       <div className="flex-1 overflow-y-auto">
         {isLoading && (
           <div className="flex items-center justify-center h-20 text-slate-400 text-xs">Cargando...</div>
@@ -121,7 +116,7 @@ function ConversationList({
           </div>
         )}
         {conversations.map(conv => {
-          const { name, avatar, handle } = getDisplay(conv)
+          const { name, avatar } = getDisplay(conv)
           const lastMsg = conv.messages[0]
           const isPending = conv.participants.some(p => p.userId === myId && p.status === 'pending')
           return (
@@ -142,11 +137,11 @@ function ConversationList({
                 </div>
                 <div className="flex items-center justify-between gap-1">
                   <span className="text-xs text-slate-400 dark:text-slate-500 truncate">
-                    {isPending ? (
-                      <span className="text-indigo-500 font-medium">Solicitud pendiente</span>
-                    ) : lastMsg ? (
-                      lastMsg.content ?? `📎 ${lastMsg.attachments[0]?.fileName ?? 'Archivo'}`
-                    ) : 'Sin mensajes'}
+                    {isPending
+                      ? <span className="text-indigo-500 font-medium">Solicitud pendiente</span>
+                      : lastMsg
+                        ? (lastMsg.content ?? `📎 ${lastMsg.attachments[0]?.fileName ?? 'Archivo'}`)
+                        : 'Sin mensajes'}
                   </span>
                   {conv.unreadCount > 0 && (
                     <span className="shrink-0 min-w-[18px] h-[18px] bg-indigo-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
@@ -357,7 +352,6 @@ function ConversationView({ convId, onBack }: { convId: number; onBack: () => vo
           const showName = !isMe && conv?.type === 'group' && showAvatar
           const deleted = !!msg.deletedAt
 
-          // Group reactions by emoji
           const reactionGroups: Record<string, { count: number; me: boolean }> = {}
           msg.reactions.forEach(r => {
             if (!reactionGroups[r.emoji]) reactionGroups[r.emoji] = { count: 0, me: false }
@@ -376,34 +370,28 @@ function ConversationView({ convId, onBack }: { convId: number; onBack: () => vo
                 {showName && (
                   <span className="text-[10px] text-slate-400 mb-0.5 ml-1">{msg.sender.name}</span>
                 )}
-                {/* Reply to */}
                 {msg.replyTo && !deleted && (
                   <div className={cn('text-[10px] px-2 py-1 rounded-t-lg mb-0 opacity-70 max-w-full truncate',
                     isMe ? 'bg-indigo-400 text-white' : 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300')}>
                     ↩ {msg.replyTo.content ?? '📎 Archivo'}
                   </div>
                 )}
-                {/* Bubble */}
                 <div className={cn('px-3 py-2 rounded-2xl text-sm break-words',
                   isMe ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-bl-sm shadow-sm',
                   msg.replyTo && !deleted && (isMe ? 'rounded-tr-none' : 'rounded-tl-none'))}>
-                  {deleted ? (
-                    <span className="italic opacity-60 text-xs">Mensaje eliminado</span>
-                  ) : (
-                    <>
-                      {msg.content && <p className="whitespace-pre-wrap">{msg.content}</p>}
-                      {msg.attachments.map(a => <FileAttachment key={a.id} att={a} />)}
-                    </>
-                  )}
+                  {deleted
+                    ? <span className="italic opacity-60 text-xs">Mensaje eliminado</span>
+                    : <>
+                        {msg.content && <p className="whitespace-pre-wrap">{msg.content}</p>}
+                        {msg.attachments.map(a => <FileAttachment key={a.id} att={a} />)}
+                      </>}
                 </div>
-                {/* Footer: time + read receipts */}
                 <div className={cn('flex items-center gap-1 mt-0.5', isMe ? 'flex-row-reverse' : 'flex-row')}>
                   <span className="text-[10px] text-slate-400">{formatShort(msg.createdAt)}</span>
                   {isMe && !deleted && (
-                    <ReadReceipts msg={msg} convType={conv?.type ?? 'direct'} totalActive={activeParticipants.length} myId={myId} />
+                    <ReadReceipts msg={msg} totalActive={activeParticipants.length} myId={myId} />
                   )}
                 </div>
-                {/* Reactions */}
                 {Object.keys(reactionGroups).length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-0.5">
                     {Object.entries(reactionGroups).map(([emoji, { count, me }]) => (
@@ -491,15 +479,12 @@ export function ChatBubble({ open, onToggle }: { open: boolean; onToggle: () => 
 
   return (
     <>
-      {/* Floating trigger button */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
-        {/* Panel */}
         {open && (
           <div
             className="w-[370px] h-[520px] bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden"
             style={{ animation: 'chatSlideUp 0.2s ease-out' }}
           >
-            {/* Close row */}
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 dark:border-slate-700 shrink-0">
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Chat</span>
               <button onClick={handleToggle}
@@ -508,19 +493,12 @@ export function ChatBubble({ open, onToggle }: { open: boolean; onToggle: () => 
               </button>
             </div>
 
-            {/* View content */}
             <div className="flex-1 min-h-0">
               {view === 'list' && (
-                <ConversationList
-                  onSelect={openConv}
-                  onNewChat={() => setView('new-chat')}
-                />
+                <ConversationList onSelect={openConv} onNewChat={() => setView('new-chat')} />
               )}
               {view === 'new-chat' && (
-                <NewChatView
-                  onBack={goBack}
-                  onStarted={(convId) => { openConv(convId) }}
-                />
+                <NewChatView onBack={goBack} onStarted={openConv} />
               )}
               {view === 'conversation' && activeConvId !== null && (
                 <ConversationView convId={activeConvId} onBack={goBack} />
@@ -529,7 +507,6 @@ export function ChatBubble({ open, onToggle }: { open: boolean; onToggle: () => 
           </div>
         )}
 
-        {/* Bubble button */}
         <button
           onClick={handleToggle}
           className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center relative"

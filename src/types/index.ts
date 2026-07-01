@@ -55,6 +55,7 @@ export interface MessageWithRelations {
   ticketId: number
   userId: number
   message: string
+  type: string
   createdAt: Date
   user: { id: number; name: string; role: string; avatar: string | null }
   attachments: AttachmentMessage[]

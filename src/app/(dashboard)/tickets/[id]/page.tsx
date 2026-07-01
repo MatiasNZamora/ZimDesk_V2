@@ -8,7 +8,7 @@ import Link from 'next/link'
 import {
   ChevronLeft, Loader2, Send, Paperclip, X, FileText,
   Download, Lock, Unlock, XCircle, CheckCircle,
-  UserCheck, Clock, Play, Settings2, AlertTriangle, History,
+  UserCheck, Clock, Play, Settings2, AlertTriangle, History, ArrowRightLeft,
 } from 'lucide-react'
 import { StatusBadge, PriorityBadge } from '@/components/ui/Badge'
 import { formatDate, timeAgo } from '@/lib/utils'
@@ -74,6 +74,11 @@ export default function TicketDetailPage() {
   // Modal de historial
   const [historialOpen, setHistorialOpen] = useState(false)
 
+  // Modal de redireccionamiento
+  const [redirectOpen,   setRedirectOpen]   = useState(false)
+  const [redirectAgent,  setRedirectAgent]  = useState('')
+  const [redirectReason, setRedirectReason] = useState('')
+
   const openManagementModal = () => {
     setPendingAgent(String(ticket?.assignedTo ?? ''))
     setPendingPriority(String(ticket?.priorityId ?? ''))
@@ -88,7 +93,7 @@ export default function TicketDetailPage() {
 
   const { data: agents } = useQuery({
     queryKey: ['agents'],
-    enabled: role === 'admin',
+    enabled: role === 'admin' || role === 'agent',
     queryFn: () => axios.get('/api/users?role=agent').then(r => r.data),
   })
 
@@ -145,6 +150,22 @@ export default function TicketDetailPage() {
       toast.success('Cambios guardados — agente notificado')
     },
     onError: () => toast.error('Error al guardar cambios'),
+  })
+
+  const redirectTicket = useMutation({
+    mutationFn: () =>
+      axios.post(`/api/tickets/${id}/redirect`, {
+        toAgentId: Number(redirectAgent),
+        reason: redirectReason.trim(),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ticket', id] })
+      setRedirectOpen(false)
+      setRedirectAgent('')
+      setRedirectReason('')
+      toast.success('Ticket redirigido — el nuevo agente fue notificado')
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.error ?? 'Error al redirigir'),
   })
 
   // ── Estados derivados ─────────────────────────────────────────────────────
@@ -242,29 +263,41 @@ export default function TicketDetailPage() {
 
           {/* Mensajes */}
           {ticket.messages?.map(msg => {
-            const isAgent = msg.user.role === 'agent'
-            const isAdmin = msg.user.role === 'admin'
-            const isClient = msg.user.role === 'client'
+            if (msg.type === 'system') {
+              return (
+                <div key={msg.id} className="flex items-center gap-3 my-1">
+                  <div className="flex-1 border-t border-dashed border-slate-200 dark:border-slate-700" />
+                  <div className="flex items-center gap-1.5 shrink-0 text-xs text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1 rounded-full">
+                    <ArrowRightLeft size={10} className="shrink-0" />
+                    <span>{msg.message}</span>
+                  </div>
+                  <div className="flex-1 border-t border-dashed border-slate-200 dark:border-slate-700" />
+                </div>
+              )
+            }
 
-            const avatarClass = isAdmin
+            const msgIsAgent = msg.user.role === 'agent'
+            const msgIsAdmin = msg.user.role === 'admin'
+
+            const avatarClass = msgIsAdmin
               ? 'bg-violet-600 text-white'
-              : isAgent
+              : msgIsAgent
               ? 'bg-indigo-600 text-white'
               : 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-200'
 
-            const cardClass = isAdmin
+            const cardClass = msgIsAdmin
               ? 'border-l-4 border-l-violet-400 bg-violet-50/40 dark:bg-violet-900/10 dark:border-l-violet-600'
-              : isAgent
+              : msgIsAgent
               ? 'border-l-4 border-l-indigo-400 bg-indigo-50/40 dark:bg-indigo-900/10 dark:border-l-indigo-600'
               : 'border-l-4 border-l-slate-300 dark:border-l-slate-600'
 
-            const badgeClass = isAdmin
+            const badgeClass = msgIsAdmin
               ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400'
-              : isAgent
+              : msgIsAgent
               ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400'
               : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
 
-            const badgeLabel = isAdmin ? 'Admin' : isAgent ? 'Agente' : 'Cliente'
+            const badgeLabel = msgIsAdmin ? 'Admin' : msgIsAgent ? 'Agente' : 'Cliente'
 
             return (
               <div key={msg.id} className={`card p-5 ${cardClass}`}>
@@ -420,6 +453,17 @@ export default function TicketDetailPage() {
             <Play size={15} />
             Acciones del ticket
           </button>
+
+          {/* Botón redirigir (agente asignado o admin, ticket no cerrado) */}
+          {!isClosed && (isAdmin || (isAgent && isMyTicket)) && (
+            <button
+              onClick={() => { setRedirectAgent(''); setRedirectReason(''); setRedirectOpen(true) }}
+              className="btn-secondary w-full justify-center gap-2"
+            >
+              <ArrowRightLeft size={15} />
+              Redirigir ticket
+            </button>
+          )}
 
         </div>
       </div>
@@ -681,6 +725,79 @@ export default function TicketDetailPage() {
               ? <Loader2 size={13} className="animate-spin" />
               : <Settings2 size={13} />}
             Guardar cambios
+          </button>
+        </div>
+      </Modal>
+
+      {/* ── Modal de redireccionamiento ───────────────────────────────────── */}
+      <Modal
+        open={redirectOpen}
+        onClose={() => setRedirectOpen(false)}
+        title="Redirigir ticket"
+        size="sm"
+      >
+        <div className="bg-slate-50 dark:bg-slate-800/60 rounded-lg px-4 py-3 mb-5">
+          <p className="text-xs text-slate-500 font-medium mb-0.5">Ticket #{ticket.id}</p>
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{ticket.subject}</p>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="form-label">Redirigir a</label>
+            <select
+              className="form-select"
+              value={redirectAgent}
+              onChange={e => setRedirectAgent(e.target.value)}
+            >
+              <option value="">Seleccioná un agente...</option>
+              {(agents ?? [])
+                .filter((a: any) => a.id !== userId)
+                .map((a: any) => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="form-label">Motivo de redireccionamiento</label>
+            <textarea
+              className="form-input resize-none"
+              rows={3}
+              maxLength={500}
+              placeholder="Explicá brevemente por qué redirigís este ticket..."
+              value={redirectReason}
+              onChange={e => setRedirectReason(e.target.value)}
+            />
+            <p className="text-xs text-slate-400 mt-1 text-right">{redirectReason.length}/500</p>
+          </div>
+
+          {redirectAgent && (
+            <p className="text-xs text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+              <UserCheck size={11} />
+              El agente seleccionado recibirá una notificación
+            </p>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-slate-100 dark:border-slate-700">
+          <button
+            type="button"
+            onClick={() => setRedirectOpen(false)}
+            className="btn-secondary btn-sm"
+            disabled={redirectTicket.isPending}
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={() => redirectTicket.mutate()}
+            disabled={!redirectAgent || !redirectReason.trim() || redirectTicket.isPending}
+            className="btn-primary btn-sm"
+          >
+            {redirectTicket.isPending
+              ? <Loader2 size={13} className="animate-spin" />
+              : <ArrowRightLeft size={13} />}
+            Redirigir
           </button>
         </div>
       </Modal>
