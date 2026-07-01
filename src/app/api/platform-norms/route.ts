@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { requireAccess } from '@/lib/permissions'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -11,8 +12,8 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session || session.user.role !== 'admin') return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const result = await requireAccess('platform_norms', 'write')
+  if (result instanceof NextResponse) return result
   const { content } = await req.json()
   const existing = await prisma.platformNorm.findFirst()
   const norm = existing

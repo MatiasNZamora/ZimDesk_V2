@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { hasModulePerm } from '@/lib/permissions'
 import { writeFile, mkdir, unlink } from 'fs/promises'
 import path from 'path'
 import { sendMail, mailTicketCreated } from '@/lib/mail'
@@ -47,6 +48,10 @@ export async function GET(req: NextRequest) {
     where.assignedTo = userId
   } else if (role === 'admin' && view === 'conformidad') {
     where.status = { slug: { in: ['resuelto', 'cerrado'] } }
+  } else if (role === 'operador') {
+    if (!hasModulePerm(session, 'tickets', 'read'))
+      return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
+    // operador con tickets.read ve todos los tickets sin filtro adicional
   }
 
   if (statusGroup === 'en_proceso') where.statusId = { in: [2, 3, 4] }

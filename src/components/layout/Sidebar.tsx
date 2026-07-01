@@ -10,6 +10,7 @@ import {
   ClipboardList, BarChart2,
 } from 'lucide-react'
 import { useAppConfig } from '@/lib/useAppConfig'
+import type { Module, OperatorPermissions } from '@/lib/permissionsShared'
 
 interface NavItem {
   href: string
@@ -17,25 +18,27 @@ interface NavItem {
   icon: React.ElementType
   roles: string[]
   section?: string
+  module?: Module
 }
 
 const navItems: NavItem[] = [
-  { href: '/dashboard',              label: 'Dashboard',            icon: LayoutDashboard, roles: ['admin', 'gerente', 'agent', 'client'], section: 'General' },
-  { href: '/tickets?view=empresa',   label: 'Tickets de mi empresa',icon: Ticket,          roles: ['gerente'], section: 'Supervisión' },
-  { href: '/tickets/create',         label: 'Nuevo Ticket',         icon: PlusCircle,      roles: ['client'], section: 'Tickets' },
-  { href: '/tickets',                label: 'Mis Tickets',          icon: Ticket,          roles: ['client'] },
-  { href: '/tickets?view=asignados', label: 'Mis Asignados',        icon: ClipboardList,   roles: ['agent'], section: 'Tickets' },
-  { href: '/tickets?view=gestion',   label: 'Gestionar Tickets',    icon: Settings,        roles: ['admin'], section: 'Gestión' },
-  { href: '/tickets?view=conformidad',label: 'Conformidad',         icon: CheckSquare,     roles: ['admin'] },
-  { href: '/users',                  label: 'Usuarios',             icon: Users,           roles: ['admin'], section: 'Mantenimiento' },
-  { href: '/estructuras',            label: 'Estructuras',          icon: Building2,       roles: ['admin'] },
-  { href: '/departments',            label: 'Departamentos',        icon: Layers,          roles: ['admin'] },
-  { href: '/categories',             label: 'Categorías',           icon: Tag,             roles: ['admin'] },
-  { href: '/faqs',                   label: 'FAQs',                 icon: HelpCircle,      roles: ['admin'] },
-  { href: '/platform-norms',         label: 'Normas de Plataforma', icon: FileText,        roles: ['admin'] },
-  { href: '/reports',                label: 'Auditoría',            icon: BarChart2,       roles: ['admin'] },
-  { href: '/settings',               label: 'Configuración',        icon: Settings2,       roles: ['admin'] },
-  { href: '/faqs',                   label: 'Preguntas Frecuentes', icon: HelpCircle,      roles: ['agent', 'client', 'gerente'], section: 'Ayuda' },
+  { href: '/dashboard',               label: 'Dashboard',             icon: LayoutDashboard, roles: ['admin', 'gerente', 'agent', 'client'], section: 'General' },
+  { href: '/tickets?view=empresa',    label: 'Tickets de mi empresa', icon: Ticket,          roles: ['gerente'], section: 'Supervisión' },
+  { href: '/tickets/create',          label: 'Nuevo Ticket',          icon: PlusCircle,      roles: ['client'], section: 'Tickets' },
+  { href: '/tickets',                 label: 'Mis Tickets',           icon: Ticket,          roles: ['client'] },
+  { href: '/tickets?view=asignados',  label: 'Mis Asignados',         icon: ClipboardList,   roles: ['agent'], section: 'Tickets' },
+  { href: '/tickets?view=gestion',    label: 'Gestionar Tickets',     icon: Settings,        roles: ['admin'], section: 'Gestión' },
+  { href: '/tickets?view=conformidad',label: 'Conformidad',           icon: CheckSquare,     roles: ['admin'] },
+  { href: '/tickets',                 label: 'Tickets',               icon: Ticket,          roles: [], section: 'Gestión', module: 'tickets' },
+  { href: '/users',                   label: 'Usuarios',              icon: Users,           roles: ['admin'], section: 'Mantenimiento', module: 'users' },
+  { href: '/estructuras',             label: 'Estructuras',           icon: Building2,       roles: ['admin'], module: 'estructuras' },
+  { href: '/departments',             label: 'Departamentos',         icon: Layers,          roles: ['admin'], module: 'departments' },
+  { href: '/categories',              label: 'Categorías',            icon: Tag,             roles: ['admin'], module: 'categories' },
+  { href: '/faqs',                    label: 'FAQs',                  icon: HelpCircle,      roles: ['admin'], module: 'faqs' },
+  { href: '/platform-norms',          label: 'Normas de Plataforma',  icon: FileText,        roles: ['admin'], module: 'platform_norms' },
+  { href: '/reports',                 label: 'Auditoría',             icon: BarChart2,       roles: ['admin'], module: 'reports' },
+  { href: '/settings',                label: 'Configuración',         icon: Settings2,       roles: ['admin'], module: 'settings' },
+  { href: '/faqs',                    label: 'Preguntas Frecuentes',  icon: HelpCircle,      roles: ['agent', 'client', 'gerente'], section: 'Ayuda' },
 ]
 
 interface SidebarProps {
@@ -48,12 +51,20 @@ function SidebarNav({ open, onClose }: SidebarProps) {
   const searchParams = useSearchParams()
   const { data: session } = useSession()
   const role = session?.user?.role ?? 'client'
+  const permissions = (session?.user as any)?.permissions as OperatorPermissions | undefined
   const { data: cfg } = useAppConfig()
   const appName = cfg?.app_name ?? 'ZimDesk'
   const logoUrl = cfg?.logo_url ?? ''
   const footerText = cfg?.footer_text ?? 'ZimDesk v2 · ZimTech'
 
-  const visibleItems = navItems.filter(item => item.roles.includes(role))
+  const visibleItems = navItems.filter(item => {
+    if (item.roles.includes(role)) return true
+    if (role === 'operador' && item.module) {
+      const perm = permissions?.[item.module]
+      return perm?.read === true || perm?.write === true
+    }
+    return false
+  })
 
   function isActive(href: string): boolean {
     const [hrefPath, hrefQuery] = href.split('?')
@@ -62,14 +73,12 @@ function SidebarNav({ open, onClose }: SidebarProps) {
     if (hrefPath === '/tickets/create') return pathname === '/tickets/create'
 
     if (hrefQuery) {
-      // Nav item tiene query param (e.g. /tickets?view=gestion)
       if (pathname !== hrefPath) return false
       const params = new URLSearchParams(hrefQuery)
       return searchParams.get('view') === params.get('view')
     }
 
     if (hrefPath === '/tickets') {
-      // "Mis Tickets" (client): activo en /tickets o en detalle de ticket
       return pathname === '/tickets' || (pathname.startsWith('/tickets/') && pathname !== '/tickets/create')
     }
 

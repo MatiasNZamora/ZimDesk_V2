@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { sendMail, mailTicketAssigned } from '@/lib/mail'
 import { sendWhatsApp } from '@/lib/whatsapp'
+import { hasModulePerm } from '@/lib/permissions'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
@@ -43,13 +44,18 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   if (role === 'agent' && ticket.assignedTo !== userId) {
     return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 })
   }
+  if (role === 'operador' && !hasModulePerm(session, 'tickets', 'read')) {
+    return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
+  }
 
   return NextResponse.json(ticket)
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
-  if (!session || session.user.role !== 'admin') {
+  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const role = session.user.role
+  if (role !== 'admin' && !(role === 'operador' && hasModulePerm(session, 'tickets', 'write'))) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
@@ -84,7 +90,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     },
   })
 
-  const userName = session.user.name ?? 'Admin'
+  const userName = session.user.name ?? (role === 'operador' ? 'Operador' : 'Admin')
 
   if (assignedTo !== ticket.assignedTo) {
     const msg = assignedTo

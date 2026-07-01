@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { sendMail, mailTicketAssigned } from '@/lib/mail'
+import { hasModulePerm } from '@/lib/permissions'
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
@@ -11,7 +12,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const role   = session.user.role
   const callerId = Number(session.user.id)
 
-  if (!['admin', 'agent'].includes(role)) {
+  const opWrite = role === 'operador' && hasModulePerm(session, 'tickets', 'write')
+  if (!['admin', 'agent'].includes(role) && !opWrite) {
     return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
   }
 

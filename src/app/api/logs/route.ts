@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { requireAccess } from '@/lib/permissions'
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session || session.user.role !== 'admin') {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-  }
+  const result = await requireAccess('reports', 'read')
+  if (result instanceof NextResponse) return result
 
   const { searchParams } = new URL(req.url)
   const page     = Number(searchParams.get('page') ?? 1)
@@ -18,9 +15,9 @@ export async function GET(req: NextRequest) {
   const where: any = {}
   if (search) {
     where.OR = [
-      { action:       { contains: search, mode: 'insensitive' } },
-      { user:  { name: { contains: search, mode: 'insensitive' } } },
-      { ticket: { subject: { contains: search, mode: 'insensitive' } } },
+      { action:  { contains: search, mode: 'insensitive' } },
+      { user:    { name: { contains: search, mode: 'insensitive' } } },
+      { ticket:  { subject: { contains: search, mode: 'insensitive' } } },
     ]
   }
   if (ticketId) where.ticketId = Number(ticketId)

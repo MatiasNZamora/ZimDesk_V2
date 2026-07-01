@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { hasModulePerm } from '@/lib/permissions'
 
 const ACTION_SLUG: Record<string, string> = {
   cerrar:            'cerrado',
@@ -42,16 +43,18 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   })
   if (!ticket) return NextResponse.json({ error: 'Ticket no encontrado' }, { status: 404 })
 
+  const opWrite = role === 'operador' && hasModulePerm(session, 'tickets', 'write')
+
   // Permisos por acción
-  if (action === 'cerrar'          && !['admin', 'agent'].includes(role)) return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
-  if (action === 'marcar_resuelto' && role !== 'admin')                   return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
-  if (action === 'cancelar'        && role !== 'admin')                   return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
-  if (action === 'reabrir'         && !['admin', 'client'].includes(role)) return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
-  if (action === 'tomar'           && role !== 'agent')                   return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
-  if (action === 'en_espera'       && !['admin', 'agent'].includes(role)) return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
-  if (action === 'reactivar'       && !['admin', 'agent'].includes(role)) return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
-  if (action === 'dar_conformidad' && role !== 'client')                  return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
-  if (action === 'dar_conformidad' && ticket.status.slug !== 'resuelto')  return NextResponse.json({ error: 'Solo se puede dar conformidad a tickets resueltos' }, { status: 422 })
+  if (action === 'cerrar'          && !['admin', 'agent'].includes(role) && !opWrite) return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
+  if (action === 'marcar_resuelto' && role !== 'admin'                   && !opWrite) return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
+  if (action === 'cancelar'        && role !== 'admin'                   && !opWrite) return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
+  if (action === 'reabrir'         && !['admin', 'client'].includes(role) && !opWrite) return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
+  if (action === 'tomar'           && role !== 'agent')                              return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
+  if (action === 'en_espera'       && !['admin', 'agent'].includes(role) && !opWrite) return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
+  if (action === 'reactivar'       && !['admin', 'agent'].includes(role) && !opWrite) return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
+  if (action === 'dar_conformidad' && role !== 'client')                              return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
+  if (action === 'dar_conformidad' && ticket.status.slug !== 'resuelto')             return NextResponse.json({ error: 'Solo se puede dar conformidad a tickets resueltos' }, { status: 422 })
 
   const targetStatus = await prisma.status.findUnique({ where: { slug: targetSlug } })
   if (!targetStatus) return NextResponse.json({ error: `Estado "${targetSlug}" no existe` }, { status: 500 })

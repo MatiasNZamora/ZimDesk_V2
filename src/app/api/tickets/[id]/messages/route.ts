@@ -9,6 +9,7 @@ import { rateLimit } from '@/lib/rateLimit'
 import { ALLOWED_MIME } from '@/lib/utils'
 import { sanitizeMessage } from '@/lib/sanitize'
 import { getRealMime } from '@/lib/mime'
+import { hasModulePerm } from '@/lib/permissions'
 
 const MAX_FILE_SIZE = 80 * 1024 * 1024
 const MAX_FILES     = 5
@@ -44,6 +45,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (role === 'agent' && ticket.assignedTo !== userId) {
     return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 })
   }
+  if (role === 'operador' && !hasModulePerm(session, 'tickets', 'write')) {
+    return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
+  }
 
   // ── Validar y guardar archivos en disco antes de la transacción ──
   const bucketId = `${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -77,7 +81,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   // Calcular nuevo estado del ticket
   let newStatusSlug: string | null = null
   const ticketUpdateData: any = {}
-  if (['agent', 'admin'].includes(role)) {
+  const isStaff = ['agent', 'admin', 'operador'].includes(role) &&
+    (role !== 'operador' || hasModulePerm(session, 'tickets', 'write'))
+  if (isStaff) {
     if (!ticket.firstResponseAt) ticketUpdateData.firstResponseAt = new Date()
     newStatusSlug = 'en_espera_cliente'
   } else if (role === 'client') {
@@ -123,7 +129,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   // Notificación en-app al destinatario
-  const notifyUserId = ['agent', 'admin'].includes(role) ? ticket.userId : ticket.assignedTo
+  const notifyUserId = isStaff ? ticket.userId : ticket.assignedTo
   if (notifyUserId) {
     const senderLabel = session.user.name ?? 'Usuario'
     prisma.notification.create({
@@ -138,7 +144,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   // Emails fire-and-forget
   const senderName = session.user.name ?? 'Usuario'
-  if (['agent', 'admin'].includes(role) && ticket.creator?.email) {
+  if (isStaff && ticket.creator?.email) {
     sendMail({
       to: ticket.creator.email,
       subject: `[ZimDesk] Nueva respuesta en ticket #${ticketId}`,

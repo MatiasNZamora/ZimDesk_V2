@@ -22,12 +22,19 @@ export function PriorityBadge({ name, color }: { name: string; color: string }) 
 }
 
 export function RoleBadge({ role }: { role: string }) {
-  const styles = {
-    admin:   'bg-purple-100 text-purple-700',
-    gerente: 'bg-teal-100 text-teal-700',
-    agent:   'bg-blue-100 text-blue-700',
-    client:  'bg-slate-100 text-slate-700',
-  }[role] ?? 'bg-slate-100 text-slate-700'
-  const labels = { admin: 'Admin', gerente: 'Gerente', agent: 'Agente', client: 'Cliente' }
-  return <span className={cn('badge', styles)}>{labels[role as keyof typeof labels] ?? role}</span>
+  const styles: Record<string, string> = {
+    admin:    'bg-purple-100 text-purple-700',
+    gerente:  'bg-teal-100 text-teal-700',
+    agent:    'bg-blue-100 text-blue-700',
+    client:   'bg-slate-100 text-slate-700',
+    operador: 'bg-amber-100 text-amber-700',
+  }
+  const labels: Record<string, string> = {
+    admin: 'Admin', gerente: 'Gerente', agent: 'Agente', client: 'Cliente', operador: 'Operador',
+  }
+  return (
+    <span className={cn('badge', styles[role] ?? 'bg-slate-100 text-slate-700')}>
+      {labels[role] ?? role}
+    </span>
+  )
 }

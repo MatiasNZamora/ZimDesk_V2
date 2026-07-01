@@ -2,6 +2,7 @@ import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from './prisma'
+import { buildPermissionsMap } from './permissions'
 
 const TOKEN_CHECK_INTERVAL_MS = 5 * 60 * 1000 // 5 minutos
 
@@ -20,7 +21,10 @@ export const authOptions: NextAuthOptions = {
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
-          include: { department: { include: { estructura: true } } },
+          include: {
+            department: { include: { estructura: true } },
+            permissions: true,
+          },
         })
 
         if (!user || !(await bcrypt.compare(credentials.password, user.password))) return null
@@ -35,6 +39,7 @@ export const authOptions: NextAuthOptions = {
           departmentName: user.department.name,
           estructuraId:   user.department.estructuraId ?? null,
           tokenVersion:   user.tokenVersion,
+          permissions:    user.role === 'operador' ? buildPermissionsMap(user.permissions) : undefined,
         }
       },
     }),
@@ -50,6 +55,7 @@ export const authOptions: NextAuthOptions = {
         token.departmentName = (user as any).departmentName
         token.estructuraId   = (user as any).estructuraId
         token.tokenVersion   = (user as any).tokenVersion
+        token.permissions    = (user as any).permissions ?? undefined
         token.lastCheckedAt  = Date.now()
         return token
       }
@@ -67,6 +73,7 @@ export const authOptions: NextAuthOptions = {
             id: true, name: true, role: true, avatar: true,
             tokenVersion: true, departmentId: true,
             department: { select: { name: true, estructuraId: true } },
+            permissions: true,
           },
         })
 
@@ -83,6 +90,9 @@ export const authOptions: NextAuthOptions = {
         token.departmentName = dbUser.department.name
         token.estructuraId   = dbUser.department.estructuraId ?? null
         token.tokenVersion   = dbUser.tokenVersion
+        token.permissions    = dbUser.role === 'operador'
+          ? buildPermissionsMap(dbUser.permissions)
+          : undefined
         token.lastCheckedAt  = Date.now()
       } catch {
         // En caso de error de DB, mantenemos el token existente
@@ -99,6 +109,7 @@ export const authOptions: NextAuthOptions = {
         session.user.departmentId   = token.departmentId as number
         session.user.departmentName = token.departmentName as string
         session.user.estructuraId   = token.estructuraId as number | null
+        session.user.permissions    = token.permissions as any
       }
       return session
     },

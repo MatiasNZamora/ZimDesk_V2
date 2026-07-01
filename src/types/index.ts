@@ -9,11 +9,12 @@ declare module 'next-auth' {
       departmentId: number
       departmentName: string
       estructuraId: number | null
+      permissions?: import('@/lib/permissions').OperatorPermissions
     } & DefaultSession['user']
   }
 }
 
-export type Role = 'admin' | 'gerente' | 'agent' | 'client'
+export type Role = 'admin' | 'gerente' | 'agent' | 'client' | 'operador'
 
 export interface UserSession {
   id: string

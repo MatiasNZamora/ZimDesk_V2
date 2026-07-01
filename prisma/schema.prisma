@@ -37,6 +37,7 @@ model User {
   chatMessagesSent      ChatMessage[]       @relation("ChatSender")
   chatReactions         ChatReaction[]
   chatMessagesRead      ChatMessageRead[]
+  permissions           UserPermission[]
 
   @@index([email])
   @@index([role])
@@ -62,6 +63,20 @@ enum Role {
   gerente
   agent
   client
+  operador
+}
+
+model UserPermission {
+  id       Int     @id @default(autoincrement())
+  userId   Int
+  module   String
+  canRead  Boolean @default(false)
+  canWrite Boolean @default(false)
+
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, module])
+  @@index([userId])
 }
 
 model Estructura {

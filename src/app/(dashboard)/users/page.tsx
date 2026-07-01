@@ -6,22 +6,90 @@ import { PlusCircle, Search, Pencil, Trash2, Loader2 } from 'lucide-react'
 import { RoleBadge } from '@/components/ui/Badge'
 import { Pagination } from '@/components/ui/Pagination'
 import { Modal } from '@/components/ui/Modal'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
+import { MODULES, MODULE_LABELS, buildPermissionsMap, type OperatorPermissions, type Module } from '@/lib/permissionsShared'
 
 const schema = z.object({
   name: z.string().min(2, 'Mínimo 2 caracteres'),
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'Mínimo 6 caracteres').optional().or(z.literal('')),
-  role: z.enum(['admin', 'gerente', 'agent', 'client']),
+  role: z.enum(['admin', 'gerente', 'agent', 'client', 'operador']),
   departmentId: z.coerce.number().int().positive('Seleccioná un departamento'),
   phone: z.string().optional().or(z.literal('')),
   whatsappKey: z.string().optional().or(z.literal('')),
 })
 type FormValues = z.infer<typeof schema>
 
+// ──────────────────────────────────────────────────────────────
+// PermissionsGrid — tabla de permisos para rol operador
+// ──────────────────────────────────────────────────────────────
+function PermissionsGrid({
+  value,
+  onChange,
+}: {
+  value: OperatorPermissions
+  onChange: (v: OperatorPermissions) => void
+}) {
+  function toggle(module: Module, access: 'read' | 'write') {
+    const current = value[module] ?? { read: false, write: false }
+    let next = { ...current, [access]: !current[access] }
+    if (access === 'write' && next.write) next.read = true
+    if (access === 'read' && !next.read) next.write = false
+    onChange({ ...value, [module]: next })
+  }
+
+  return (
+    <div className="mt-1 rounded-lg border border-slate-200 overflow-hidden">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="bg-slate-50 text-slate-500 text-xs font-semibold uppercase tracking-wide">
+            <th className="text-left px-3 py-2">Módulo</th>
+            <th className="text-center px-3 py-2 w-24">Lectura</th>
+            <th className="text-center px-3 py-2 w-24">Escritura</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {MODULES.map(mod => {
+            const meta = MODULE_LABELS[mod]
+            const perm = value[mod] ?? { read: false, write: false }
+            return (
+              <tr key={mod} className="hover:bg-slate-50 transition-colors">
+                <td className="px-3 py-2 font-medium text-slate-700">{meta.label}</td>
+                <td className="px-3 py-2 text-center">
+                  <input
+                    type="checkbox"
+                    checked={perm.read}
+                    onChange={() => toggle(mod, 'read')}
+                    className="w-4 h-4 accent-indigo-600 cursor-pointer"
+                  />
+                </td>
+                <td className="px-3 py-2 text-center">
+                  {meta.hasWrite ? (
+                    <input
+                      type="checkbox"
+                      checked={perm.write}
+                      onChange={() => toggle(mod, 'write')}
+                      className="w-4 h-4 accent-indigo-600 cursor-pointer"
+                    />
+                  ) : (
+                    <span className="text-slate-300">—</span>
+                  )}
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────
+// ActiveToggle
+// ──────────────────────────────────────────────────────────────
 function ActiveToggle({ userId, active, disabled }: { userId: number; active: boolean; disabled?: boolean }) {
   const qc = useQueryClient()
   const toggle = useMutation({
@@ -57,6 +125,9 @@ function ActiveToggle({ userId, active, disabled }: { userId: number; active: bo
   )
 }
 
+// ──────────────────────────────────────────────────────────────
+// UsersPage
+// ──────────────────────────────────────────────────────────────
 export default function UsersPage() {
   const qc = useQueryClient()
   const [page, setPage] = useState(1)
@@ -65,6 +136,7 @@ export default function UsersPage() {
   const [editing, setEditing] = useState<any>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null)
   const [selectedEstructura, setSelectedEstructura] = useState<string>('')
+  const [operatorPerms, setOperatorPerms] = useState<OperatorPermissions>({})
 
   const { data, isLoading } = useQuery({
     queryKey: ['users', page, search],
@@ -83,13 +155,16 @@ export default function UsersPage() {
     }).then(r => r.data),
   })
 
-  const { register, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm<FormValues>({
+  const { register, handleSubmit, reset, setValue, control, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(schema),
   })
+
+  const watchedRole = useWatch({ control, name: 'role' })
 
   function openCreate() {
     setEditing(null)
     setSelectedEstructura('')
+    setOperatorPerms({})
     reset({ name: '', email: '', password: '', role: 'client', departmentId: 0, phone: '', whatsappKey: '' })
     setModalOpen(true)
   }
@@ -99,6 +174,11 @@ export default function UsersPage() {
     const estructId = user.department?.estructura?.id
     setSelectedEstructura(estructId ? String(estructId) : '')
     reset({ name: user.name, email: user.email, password: '', role: user.role, departmentId: user.department?.id, phone: user.phone ?? '', whatsappKey: user.whatsappKey ?? '' })
+    if (user.role === 'operador' && user.permissions) {
+      setOperatorPerms(buildPermissionsMap(user.permissions))
+    } else {
+      setOperatorPerms({})
+    }
     setModalOpen(true)
   }
 
@@ -109,7 +189,8 @@ export default function UsersPage() {
 
   const save = useMutation({
     mutationFn: (data: FormValues) => {
-      const payload = { ...data, ...(data.password === '' ? { password: undefined } : {}) }
+      const payload: any = { ...data, ...(data.password === '' ? { password: undefined } : {}) }
+      if (data.role === 'operador') payload.permissions = operatorPerms
       return editing
         ? axios.put(`/api/users/${editing.id}`, payload)
         : axios.post('/api/users', payload)
@@ -258,9 +339,18 @@ export default function UsersPage() {
               <option value="client">Cliente</option>
               <option value="agent">Agente</option>
               <option value="gerente">Gerente</option>
+              <option value="operador">Operador</option>
               <option value="admin">Admin</option>
             </select>
           </div>
+
+          {watchedRole === 'operador' && (
+            <div>
+              <label className="form-label">Permisos del Operador</label>
+              <PermissionsGrid value={operatorPerms} onChange={setOperatorPerms} />
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="form-label">Empresa (Estructura)</label>
