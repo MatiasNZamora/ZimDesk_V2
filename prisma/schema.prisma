@@ -38,6 +38,7 @@ model User {
   chatReactions         ChatReaction[]
   chatMessagesRead      ChatMessageRead[]
   permissions           UserPermission[]
+  responsibleFor        EquipmentReception[] @relation("ReceptionResponsible")
 
   @@index([email])
   @@index([role])
@@ -80,21 +81,23 @@ model UserPermission {
 }
 
 model Estructura {
-  id          Int          @id @default(autoincrement())
+  id          Int                  @id @default(autoincrement())
   name        String
   departments Department[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  receptions  EquipmentReception[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
 }
 
 model Department {
-  id           Int         @id @default(autoincrement())
+  id           Int                  @id @default(autoincrement())
   name         String
   estructuraId Int?
-  estructura   Estructura? @relation(fields: [estructuraId], references: [id])
+  estructura   Estructura?          @relation(fields: [estructuraId], references: [id])
   users        User[]
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  receptions   EquipmentReception[]
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
 
   @@index([estructuraId])
 }
@@ -337,4 +340,69 @@ model ChatMessageRead {
   user      User        @relation(fields: [userId], references: [id])
 
   @@id([messageId, userId])
+}
+
+// ─── RECEPCIONES DE EQUIPOS ───────────────────────────────────────────────────
+
+enum ReceptionStatus {
+  RECIBIDO
+  EN_REVISION
+  EN_REPARACION
+  LISTO
+  ENTREGADO
+}
+
+enum EquipmentCondition {
+  NUEVO
+  BUENO
+  REGULAR
+  DANADO
+}
+
+model ReceptionOrderCounter {
+  id         Int @id @default(1)
+  lastNumber Int @default(0)
+}
+
+model ReceptionCategory {
+  id           Int                  @id @default(autoincrement())
+  name         String               @unique @db.VarChar(100)
+  active       Boolean              @default(true)
+  displayOrder Int                  @default(0)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  receptions   EquipmentReception[]
+}
+
+model EquipmentReception {
+  id                      Int                @id @default(autoincrement())
+  orderNumber             String             @unique @db.VarChar(20)
+  brand                   String?            @db.VarChar(100)
+  model                   String?            @db.VarChar(100)
+  categoryId              Int?
+  category                ReceptionCategory? @relation(fields: [categoryId], references: [id])
+  condition               EquipmentCondition
+  observations            String?
+  intakeDate              DateTime           @db.Date
+  status                  ReceptionStatus    @default(RECIBIDO)
+  estructuraId            Int?
+  estructura              Estructura?        @relation(fields: [estructuraId], references: [id])
+  departmentId            Int?
+  department              Department?        @relation(fields: [departmentId], references: [id])
+  responsibleId           Int?
+  responsible             User?              @relation("ReceptionResponsible", fields: [responsibleId], references: [id])
+  contactName             String?            @db.VarChar(150)
+  contactPhone            String?            @db.VarChar(50)
+  signatureBase64         String?
+  deliverySignatureBase64 String?
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+  deletedAt               DateTime?
+
+  @@index([status])
+  @@index([estructuraId])
+  @@index([departmentId])
+  @@index([responsibleId])
+  @@index([orderNumber])
+  @@index([deletedAt])
 }

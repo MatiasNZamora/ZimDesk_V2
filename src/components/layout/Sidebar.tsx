@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Ticket, PlusCircle, Users, Building2, Layers,
   Tag, HelpCircle, FileText, CheckSquare, Settings, Settings2, X,
-  ClipboardList, BarChart2,
+  ClipboardList, BarChart2, Inbox,
 } from 'lucide-react'
 import { useAppConfig } from '@/lib/useAppConfig'
 import type { Module, OperatorPermissions } from '@/lib/permissionsShared'
@@ -31,13 +31,14 @@ const navItems: NavItem[] = [
   { href: '/tickets?view=conformidad',label: 'Conformidad',           icon: CheckSquare,     roles: ['admin'] },
   { href: '/tickets',                 label: 'Tickets',               icon: Ticket,          roles: [], section: 'Gestión', module: 'tickets' },
   { href: '/users',                   label: 'Usuarios',              icon: Users,           roles: ['admin'], section: 'Mantenimiento', module: 'users' },
-  { href: '/estructuras',             label: 'Estructuras',           icon: Building2,       roles: ['admin'], module: 'estructuras' },
+  { href: '/estructuras',             label: 'Estructuras / Cliente', icon: Building2,       roles: ['admin'], module: 'estructuras' },
   { href: '/departments',             label: 'Departamentos',         icon: Layers,          roles: ['admin'], module: 'departments' },
   { href: '/categories',              label: 'Categorías',            icon: Tag,             roles: ['admin'], module: 'categories' },
   { href: '/faqs',                    label: 'FAQs',                  icon: HelpCircle,      roles: ['admin'], module: 'faqs' },
   { href: '/platform-norms',          label: 'Normas de Plataforma',  icon: FileText,        roles: ['admin'], module: 'platform_norms' },
   { href: '/reports',                 label: 'Auditoría',             icon: BarChart2,       roles: ['admin'], module: 'reports' },
   { href: '/settings',                label: 'Configuración',         icon: Settings2,       roles: ['admin'], module: 'settings' },
+  { href: '/recepciones',             label: 'Recepciones',           icon: Inbox,           roles: ['admin', 'agent', 'gerente'], section: 'Soporte', module: 'recepciones' },
   { href: '/faqs',                    label: 'Preguntas Frecuentes',  icon: HelpCircle,      roles: ['agent', 'client', 'gerente'], section: 'Ayuda' },
 ]
 

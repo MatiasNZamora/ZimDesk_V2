@@ -52,7 +52,7 @@ export default function EstructurasPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Building2 size={20} className="text-indigo-600" />
-          <h1 className="text-xl font-bold text-slate-800">Estructuras</h1>
+          <h1 className="text-xl font-bold text-slate-800">Estructuras / Cliente</h1>
         </div>
         <button onClick={openCreate} className="btn-primary btn-sm">
           <PlusCircle size={15} /> Nueva

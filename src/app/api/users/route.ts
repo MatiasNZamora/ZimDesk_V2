@@ -48,6 +48,26 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(agents)
   }
 
+  // Dropdown de clientes para el módulo de recepciones (accesible para agent/admin/gerente/operador)
+  if (roleFilter === 'client' && ['agent', 'admin', 'gerente', 'operador'].includes(session.user.role)) {
+    const clientsList = await prisma.user.findMany({
+      where: { role: 'client', active: true },
+      select: { id: true, name: true, email: true, phone: true },
+      orderBy: { name: 'asc' },
+    })
+    return NextResponse.json(clientsList)
+  }
+
+  // Dropdown de staff (admin+agent+operador) para el responsable de recepción
+  if (roleFilter === 'staff' && ['agent', 'admin', 'gerente', 'operador'].includes(session.user.role)) {
+    const staff = await prisma.user.findMany({
+      where: { role: { in: ['admin', 'agent', 'operador'] }, active: true },
+      select: { id: true, name: true, email: true, role: true },
+      orderBy: { name: 'asc' },
+    })
+    return NextResponse.json(staff)
+  }
+
   const search = searchParams.get('search') ?? ''
   const page = Number(searchParams.get('page') ?? 1)
   const perPage = Number(searchParams.get('perPage') ?? 25)
