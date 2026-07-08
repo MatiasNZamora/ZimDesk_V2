@@ -1,0 +1,74 @@
+name: Deploy ZimDesk v2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          envs: NEXTAUTH_URL,NEXTAUTH_SECRET,NEXT_PUBLIC_DOMAIN,DB_PASSWORD,DATABASE_URL,MAIL_HOST,MAIL_PORT,MAIL_USER,MAIL_PASSWORD,MAIL_FROM,MAIL_TICKET_NOTIFICATION,UPLOAD_DIR,MAX_FILE_SIZE_MB,MAX_VIDEO_SIZE_MB
+          script: |
+            set -e
+
+            cd /opt/zimdesk
+
+            echo ">>> Actualizando código..."
+            git pull origin main
+
+            echo ">>> Escribiendo .env desde GitHub Secrets..."
+            cat > .env <<EOF
+            NEXTAUTH_URL=${NEXTAUTH_URL}
+            NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+            NEXT_PUBLIC_DOMAIN=${NEXT_PUBLIC_DOMAIN}
+            DB_PASSWORD=${DB_PASSWORD}
+            DATABASE_URL=${DATABASE_URL}
+            MAIL_HOST=${MAIL_HOST}
+            MAIL_PORT=${MAIL_PORT}
+            MAIL_USER=${MAIL_USER}
+            MAIL_PASSWORD=${MAIL_PASSWORD}
+            MAIL_FROM=${MAIL_FROM}
+            MAIL_TICKET_NOTIFICATION=${MAIL_TICKET_NOTIFICATION}
+            UPLOAD_DIR=${UPLOAD_DIR}
+            MAX_FILE_SIZE_MB=${MAX_FILE_SIZE_MB}
+            MAX_VIDEO_SIZE_MB=${MAX_VIDEO_SIZE_MB}
+            EOF
+
+            echo ">>> Construyendo imagen Docker..."
+            docker compose -f docker-compose.production.yml build
+
+            echo ">>> Ejecutando migraciones..."
+            docker compose -f docker-compose.production.yml run --rm \
+              app npx prisma db push
+
+            echo ">>> Reiniciando servicios..."
+            docker compose -f docker-compose.production.yml up -d
+
+            echo ">>> Estado final:"
+            docker compose -f docker-compose.production.yml ps
+        env:
+          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          NEXT_PUBLIC_DOMAIN: ${{ secrets.NEXT_PUBLIC_DOMAIN }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          MAIL_HOST: ${{ secrets.MAIL_HOST }}
+          MAIL_PORT: ${{ secrets.MAIL_PORT }}
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          MAIL_TICKET_NOTIFICATION: ${{ secrets.MAIL_TICKET_NOTIFICATION }}
+          UPLOAD_DIR: ${{ secrets.UPLOAD_DIR }}
+          MAX_FILE_SIZE_MB: ${{ secrets.MAX_FILE_SIZE_MB }}
+          MAX_VIDEO_SIZE_MB: ${{ secrets.MAX_VIDEO_SIZE_MB }}

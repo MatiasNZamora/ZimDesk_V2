@@ -1,5 +1,6 @@
 .env
 .env.local
+.env.production.local
 .next/
 node_modules/
 public/uploads/

@@ -1,0 +1,46 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zimdesk_app
+    ports:
+      - "127.0.0.1:8084:3000"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads:/app/public/uploads
+    networks:
+      - zimdesk_network
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    container_name: zimdesk_db
+    environment:
+      POSTGRES_USER: zimdesk
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: zimdesk
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zimdesk"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - zimdesk_network
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+    name: zimdesk_pgdata
+  uploads:
+    name: zimdesk_uploads
+
+networks:
+  zimdesk_network:
+    name: zimdesk_network
