@@ -39,6 +39,7 @@ const navItems: NavItem[] = [
   { href: '/reports',                 label: 'Auditoría',             icon: BarChart2,       roles: ['admin'], module: 'reports' },
   { href: '/settings',                label: 'Configuración',         icon: Settings2,       roles: ['admin'], module: 'settings' },
   { href: '/recepciones',             label: 'Recepciones',           icon: Inbox,           roles: ['admin', 'agent', 'gerente'], section: 'Soporte', module: 'recepciones' },
+  { href: '/informes',               label: 'Informes Técnicos',     icon: FileText,        roles: ['admin', 'agent', 'gerente'], module: 'informes' },
   { href: '/faqs',                    label: 'Preguntas Frecuentes',  icon: HelpCircle,      roles: ['agent', 'client', 'gerente'], section: 'Ayuda' },
 ]
 

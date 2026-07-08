@@ -1,6 +1,6 @@
 export const MODULES = [
   'tickets', 'users', 'estructuras', 'departments',
-  'categories', 'faqs', 'platform_norms', 'reports', 'settings', 'recepciones',
+  'categories', 'faqs', 'platform_norms', 'reports', 'settings', 'recepciones', 'informes',
 ] as const
 
 export type Module = typeof MODULES[number]
@@ -18,6 +18,7 @@ export const MODULE_LABELS: Record<Module, { label: string; hasWrite: boolean }>
   reports:        { label: 'Auditoría',            hasWrite: false },
   settings:       { label: 'Configuración',        hasWrite: true },
   recepciones:    { label: 'Recepciones',          hasWrite: true },
+  informes:       { label: 'Informes Técnicos',    hasWrite: true },
 }
 
 export function buildPermissionsMap(
