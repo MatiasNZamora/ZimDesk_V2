@@ -4,7 +4,7 @@ import axios from 'axios'
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
-import { PlusCircle, Loader2, MoreHorizontal, FileText, Trash2, Eye } from 'lucide-react'
+import { PlusCircle, Loader2, FileText, Trash2, Eye, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { Modal } from '@/components/ui/Modal'
 
@@ -80,7 +80,7 @@ export default function InformesPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-5">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-slate-800">Informes Técnicos</h1>
         <Link href="/informes/nuevo" className="btn-primary btn-sm flex items-center gap-1.5">
@@ -117,7 +117,7 @@ export default function InformesPage() {
             <tbody>
               {filtered.map(r => (
                 <tr key={r.id}>
-                  <td>
+                  <td className="whitespace-nowrap">
                     <Link href={`/informes/${r.id}`} className="font-mono font-semibold text-indigo-600 hover:underline text-sm">
                       {r.reportNumber}
                     </Link>
@@ -135,13 +135,13 @@ export default function InformesPage() {
                   </td>
                   <td className="text-sm text-slate-600">{r.status}</td>
                   <td className="text-sm text-slate-500">{fmt(r.createdAt)}</td>
-                  <td>
+                  <td className="whitespace-nowrap">
                     <div className="relative">
                       <button
                         onClick={() => setOpenMenu(openMenu === r.id ? null : r.id)}
-                        className="btn-ghost btn-sm p-1.5"
+                        className="btn-secondary btn-sm flex items-center gap-1.5"
                       >
-                        <MoreHorizontal size={15} />
+                        Acciones <ChevronDown size={13} />
                       </button>
                       {openMenu === r.id && (
                         <>
