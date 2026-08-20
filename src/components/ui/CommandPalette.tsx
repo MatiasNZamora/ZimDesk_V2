@@ -116,7 +116,7 @@ export function CommandPalette({ open, onClose }: Props) {
         {/* Results */}
         <div className="max-h-80 overflow-y-auto py-2">
           {filtered.length === 0 ? (
-            <p className="text-sm text-slate-400 text-center py-8">Sin resultados para "{query}"</p>
+            <p className="text-sm text-slate-400 text-center py-8">Sin resultados para &ldquo;{query}&rdquo;</p>
           ) : (
             filtered.map((item, idx) => {
               const Icon = item.icon

@@ -6,4 +6,5 @@ node_modules/
 public/uploads/
 *.log
 .DS_Store
-prisma/migrations/
+backups/
+.image-previous

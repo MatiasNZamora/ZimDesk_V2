@@ -159,7 +159,7 @@ export default function InformeDetailPage() {
         {report.clientQuote && (
           <SectionBlock num={2} title="Entrevista con el solicitante">
             <blockquote className="border-l-4 border-blue-400 pl-4 italic text-slate-600 text-sm">
-              "{report.clientQuote}"
+              &ldquo;{report.clientQuote}&rdquo;
             </blockquote>
           </SectionBlock>
         )}

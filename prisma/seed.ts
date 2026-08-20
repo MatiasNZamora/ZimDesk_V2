@@ -1,6 +1,11 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
+if (process.env.NODE_ENV === 'production') {
+  console.error('❌ seed.ts crea datos de demo y NUNCA debe correr en producción. Usá scripts/bootstrap.mjs.')
+  process.exit(1)
+}
+
 const prisma = new PrismaClient()
 
 function slugifyHandle(name: string): string {
@@ -94,7 +99,11 @@ async function main() {
   const [catSoporte, catFacturacion, catConsultas, catAcceso, catInfra] = cats
 
   // ─── USUARIOS ────────────────────────────────────────────────
-  const pass = await bcrypt.hash('zimdesk2026', 10)
+  const seedPassword = process.env.SEED_DEFAULT_PASSWORD
+  if (!seedPassword) {
+    throw new Error('SEED_DEFAULT_PASSWORD no está definida. Este seed es solo para desarrollo: defini la variable en tu .env.local antes de correrlo.')
+  }
+  const pass = await bcrypt.hash(seedPassword, 10)
 
   const admin = await prisma.user.upsert({
     where: { email: 'admin@zimtech.com.ar' },
@@ -864,30 +873,30 @@ async function main() {
   console.log('══════════════════════════════════════════════════════════')
   console.log('  Usuarios disponibles para testing:')
   console.log('══════════════════════════════════════════════════════════')
-  console.log('  ADMIN    admin@zimtech.com.ar              → zimdesk2026')
+  console.log('  ADMIN    admin@zimtech.com.ar              → ${seedPassword}')
   console.log('           Ve todo · gestiona usuarios y sistema')
   console.log('')
-  console.log('  GERENTE  gerente@zimtech.com.ar            → zimdesk2026')
+  console.log('  GERENTE  gerente@zimtech.com.ar            → ${seedPassword}')
   console.log('           Ve tickets de ZimTech Interna (IT + RRHH + Dir)')
   console.log('')
-  console.log('  GERENTE  gerente@empresademo.com           → zimdesk2026')
+  console.log('  GERENTE  gerente@empresademo.com           → ${seedPassword}')
   console.log('           Ve tickets de Empresa Demo SA (Ops + Fin + Mkt + Dir)')
   console.log('')
-  console.log('  AGENTE   agente@zimtech.com.ar             → zimdesk2026')
+  console.log('  AGENTE   agente@zimtech.com.ar             → ${seedPassword}')
   console.log('           Lucas Herrera — ve sus tickets asignados')
   console.log('')
-  console.log('  AGENTE   soporte@zimtech.com.ar            → zimdesk2026')
+  console.log('  AGENTE   soporte@zimtech.com.ar            → ${seedPassword}')
   console.log('           Valentina Torres — ve sus tickets asignados')
   console.log('')
-  console.log('  CLIENTE  cliente@zimtech.com.ar            → zimdesk2026')
+  console.log('  CLIENTE  cliente@zimtech.com.ar            → ${seedPassword}')
   console.log('           Cliente Demo — Dep. RRHH (ZimTech Interna)')
   console.log('')
-  console.log('  CLIENTE  pedro.rojas@zimtech.com.ar        → zimdesk2026')
+  console.log('  CLIENTE  pedro.rojas@zimtech.com.ar        → ${seedPassword}')
   console.log('           Pedro Rojas — tiene ticket RESUELTO para dar conformidad')
   console.log('')
-  console.log('  CLIENTE  maria.gonzalez@zimtech.com.ar     → zimdesk2026')
-  console.log('  CLIENTE  carlos.mendez@zimtech.com.ar      → zimdesk2026')
-  console.log('  CLIENTE  lucia.fernandez@zimtech.com.ar    → zimdesk2026')
+  console.log('  CLIENTE  maria.gonzalez@zimtech.com.ar     → ${seedPassword}')
+  console.log('  CLIENTE  carlos.mendez@zimtech.com.ar      → ${seedPassword}')
+  console.log('  CLIENTE  lucia.fernandez@zimtech.com.ar    → ${seedPassword}')
   console.log('           Empresa Demo SA (Ops / Finanzas / Marketing)')
   console.log('══════════════════════════════════════════════════════════')
   console.log('  Total tickets: ~22 distribuidos en todos los estados')

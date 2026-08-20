@@ -20,7 +20,7 @@ Sistema de Mesa de Ayuda (Help Desk) desarrollado para ZimTech. Permite gestiona
 | Emails | Nodemailer |
 | Testing | Vitest 4 + Testing Library |
 | Contenedores | Docker + Docker Compose |
-| Deploy | Vercel (con Vercel Cron) |
+| Deploy | VPS (Docker Compose + GitHub Actions → GHCR) |
 
 ---
 
@@ -117,7 +117,8 @@ La app queda disponible en [http://localhost:3000](http://localhost:3000).
 
 ## Usuarios de Prueba (Seed)
 
-Todos los usuarios tienen la contraseña: **`zimdesk2026`**
+Todos los usuarios tienen la contraseña definida en `SEED_DEFAULT_PASSWORD` (variable
+obligatoria en tu `.env.local`; el seed aborta si falta o si `NODE_ENV=production`).
 
 | Email | Rol | Departamento | Nombre |
 |---|---|---|---|
@@ -250,42 +251,25 @@ El reporte HTML queda en `./coverage/index.html`. Umbrales configurados:
 | JWT invalidation | Campo `tokenVersion` en DB + chequeo periódico cada 5 min al cambiar rol/dept |
 | Archivos protegidos | Middleware protege `/uploads/*`, requiere sesión válida |
 | Transacciones atómicas | `prisma.$transaction()` en creación de tickets y mensajes |
-| CRON protegido | `Authorization: Bearer <CRON_SECRET>` — solo Vercel puede invocar el cron |
+| CRON protegido | `Authorization: Bearer <CRON_SECRET>` (o `?secret=`) — ver nota abajo |
 
 ---
 
-## Deployment en Vercel
+## Deployment
 
-### Variables de entorno
+Ver **[DEPLOY.md](./DEPLOY.md)** para el runbook completo: arquitectura en la VPS, bootstrap
+inicial, pipeline de CI/CD (test → build a GHCR → deploy), rollback y restore de backups.
 
-En el dashboard de Vercel → Settings → Environment Variables:
+Resumen: push a `main` corre lint/typecheck/tests, si pasan construye la imagen Docker y la
+publica en GitHub Container Registry, y la VPS hace `pull` + `up -d` (nunca build local).
+Postgres y los uploads quedan en volúmenes Docker persistentes; las migraciones corren con
+`prisma migrate deploy` antes de levantar la app.
 
-```
-DATABASE_URL           URL de PostgreSQL en producción (Supabase, Neon, Railway)
-NEXTAUTH_URL           https://tu-dominio.vercel.app
-NEXTAUTH_SECRET        openssl rand -base64 32
-MAIL_HOST              smtp.tu-proveedor.com
-MAIL_PORT              465
-MAIL_USER              tu-usuario@dominio.com
-MAIL_PASSWORD          tu-contraseña
-MAIL_FROM              noreply@tu-dominio.com
-CRON_SECRET            openssl rand -base64 32
-SLA_THRESHOLD_MINUTES  120
-```
+### Nota sobre `/api/cron/sla-alerts`
 
-### Cron Job (SLA Alerts)
-
-`vercel.json` ya configura el cron automáticamente. Vercel llama al endpoint cada 30 minutos con `Authorization: Bearer <CRON_SECRET>`.
-
-Para activación manual:
-
-```bash
-curl "https://tu-app.vercel.app/api/cron/sla-alerts?secret=TU_CRON_SECRET"
-```
-
-### Nota sobre uploads
-
-Vercel tiene filesystem efímero. Para producción, migrar a **Vercel Blob**, **AWS S3** o **Cloudinary**.
+El middleware solo deja pasar sin sesión los prefijos `/api/auth` y `/api/public/`; el propio
+endpoint valida `CRON_SECRET`. En la VPS lo dispara un cron dentro del contenedor de backup
+(no hay equivalente a Vercel Cron) — detalle en `DEPLOY.md`.
 
 ---
 

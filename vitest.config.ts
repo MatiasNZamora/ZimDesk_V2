@@ -8,9 +8,6 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./src/__tests__/setup.ts'],
-    environmentMatchGlobs: [
-      ['src/__tests__/components/**', 'jsdom'],
-    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary', 'html'],

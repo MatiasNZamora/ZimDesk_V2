@@ -196,7 +196,7 @@ export default function NuevaRecepcionPage() {
                       ))
                     ) : (
                       <div className="px-4 py-3 text-sm text-slate-500">
-                        No se encontró "{estructuraQuery}"
+                        No se encontró &ldquo;{estructuraQuery}&rdquo;
                       </div>
                     )}
 

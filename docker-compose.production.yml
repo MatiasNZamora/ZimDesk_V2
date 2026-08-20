@@ -1,36 +1,71 @@
+name: zimdesk
+
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: zimdesk_app
-    ports:
-      - "127.0.0.1:8084:3000"
+    image: "${ZIMDESK_IMAGE:?Definí ZIMDESK_IMAGE en .env, ej ghcr.io/matiasnzamora/zimdesk_v2:sha-abc1234}"
+    container_name: zimdesk-app
     env_file:
       - .env
+    expose:
+      - "3000"
     depends_on:
       db:
         condition: service_healthy
     volumes:
       - uploads:/app/public/uploads
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/public/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 45s
     networks:
       - zimdesk_network
     restart: unless-stopped
 
   db:
     image: postgres:16-alpine
-    container_name: zimdesk_db
+    container_name: zimdesk-db
     environment:
       POSTGRES_USER: zimdesk
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Definí DB_PASSWORD en .env}
       POSTGRES_DB: zimdesk
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U zimdesk"]
+      test: ["CMD-SHELL", "pg_isready -U zimdesk -d zimdesk"]
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - zimdesk_network
+    restart: unless-stopped
+
+  # Backup diario de la DB + uploads, y cron de alertas SLA (no hay Vercel Cron acá).
+  backup:
+    image: postgres:16-alpine
+    container_name: zimdesk-backup
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGUSER: zimdesk
+      PGPASSWORD: ${DB_PASSWORD:?Definí DB_PASSWORD en .env}
+      PGDATABASE: zimdesk
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      CRON_SECRET: ${CRON_SECRET:-}
+      SLA_URL: http://zimdesk-app:3000/api/cron/sla-alerts
+    volumes:
+      - backups:/backups
+      - uploads:/app/public/uploads:ro
+      - ./scripts/backup.sh:/backup.sh:ro
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        chmod +x /backup.sh
+        printf '0 3 * * * /backup.sh >> /backups/backup.log 2>&1\n*/30 * * * * wget -qO- "$$SLA_URL?secret=$$CRON_SECRET" >> /backups/sla-cron.log 2>&1\n' > /etc/crontabs/root
+        crond -f
     networks:
       - zimdesk_network
     restart: unless-stopped
@@ -40,6 +75,8 @@ volumes:
     name: zimdesk_pgdata
   uploads:
     name: zimdesk_uploads
+  backups:
+    name: zimdesk_backups
 
 networks:
   zimdesk_network:

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   const rows = await prisma.appConfig.findMany({
     where: { key: { in: ['app_name', 'logo_url', 'favicon_url'] } },
