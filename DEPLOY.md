@@ -120,8 +120,6 @@ tar xzf uploads_YYYYMMDD_HHMMSS.tar.gz -C <ruta_del_volumen_uploads>
 | `VPS_USER` | secret | `deploy` |
 | `VPS_SSH_KEY` | secret | clave privada dedicada al deploy |
 | `VPS_PORT` | variable | `2222` |
-| `GHCR_USERNAME` | secret | usuario de GitHub con acceso al package |
-| `GHCR_PAT` | secret | PAT classic, scope `read:packages` únicamente |
 | `NEXT_PUBLIC_DOMAIN` | variable | `soportezimtech.com.ar` (sin protocolo, sin barra) |
 | `NEXTAUTH_URL` | variable | `https://soportezimtech.com.ar` |
 | `NEXTAUTH_SECRET` | secret | `openssl rand -base64 48` |
