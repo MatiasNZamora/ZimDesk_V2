@@ -35,6 +35,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modul
 COPY --from=deps    --chown=nextjs:nodejs /app/node_modules/prisma  ./node_modules/prisma
 COPY --from=deps    --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 
 RUN mkdir -p ./public/uploads && chown -R nextjs:nodejs ./public/uploads && \
     chmod +x ./docker-entrypoint.sh
