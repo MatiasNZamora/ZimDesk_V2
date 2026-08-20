@@ -64,8 +64,8 @@ async function main() {
   } else {
     const email = process.env.ADMIN_EMAIL
     const password = process.env.ADMIN_PASSWORD
-    if (!email || !password || password.length < 12) {
-      throw new Error('ADMIN_EMAIL y ADMIN_PASSWORD (>=12 caracteres) son obligatorios para crear el primer admin.')
+    if (!email || !password || password.length < 8) {
+      throw new Error('ADMIN_EMAIL y ADMIN_PASSWORD (>=8 caracteres) son obligatorios para crear el primer admin.')
     }
     const hash = await bcrypt.hash(password, 10)
     const admin = await prisma.user.create({
