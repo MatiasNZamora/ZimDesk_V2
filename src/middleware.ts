@@ -1,14 +1,19 @@
 import { getToken } from 'next-auth/jwt'
 import { NextRequest, NextResponse } from 'next/server'
 
-const PUBLIC_PAGES = ['/login', '/forgot-password', '/reset-password', '/seguimiento']
-const PUBLIC_API   = ['/api/auth', '/api/public/', '/api/cron/']
+const PUBLIC_PAGES  = ['/login', '/forgot-password', '/reset-password', '/seguimiento']
+const PUBLIC_API    = ['/api/auth', '/api/public/', '/api/cron/']
+// Logo y favicon se referencian antes de autenticarse (login) y en la página pública
+// de seguimiento, así que no pueden quedar detrás del auth gate. El resto de /uploads
+// (avatares, etc.) sigue protegido.
+const PUBLIC_ASSETS = ['/uploads/branding']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   // Rutas de auth pública siempre pasan
   if (PUBLIC_API.some(p => pathname.startsWith(p))) return NextResponse.next()
+  if (PUBLIC_ASSETS.some(p => pathname.startsWith(p))) return NextResponse.next()
 
   // Páginas públicas (login, forgot-password, reset-password)
   if (PUBLIC_PAGES.some(p => pathname.startsWith(p))) {

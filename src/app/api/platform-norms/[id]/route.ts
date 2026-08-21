@@ -1,26 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { requireAccess } from '@/lib/permissions'
 import { sanitizeMessage } from '@/lib/sanitize'
 
-export async function GET() {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-  const data = await prisma.platformNorm.findMany({ orderBy: { createdAt: 'asc' } })
-  return NextResponse.json(data)
-}
-
-export async function POST(req: NextRequest) {
+export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const result = await requireAccess('platform_norms', 'write')
   if (result instanceof NextResponse) return result
   const { title, content } = await req.json()
   if (!title?.trim() || !content?.trim()) {
     return NextResponse.json({ error: 'Título y descripción son requeridos' }, { status: 422 })
   }
-  const data = await prisma.platformNorm.create({
+  const data = await prisma.platformNorm.update({
+    where: { id: Number(params.id) },
     data: { title: title.trim(), content: sanitizeMessage(content) },
   })
-  return NextResponse.json(data, { status: 201 })
+  return NextResponse.json(data)
+}
+
+export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
+  const result = await requireAccess('platform_norms', 'write')
+  if (result instanceof NextResponse) return result
+  await prisma.platformNorm.delete({ where: { id: Number(params.id) } })
+  return NextResponse.json({ success: true })
 }

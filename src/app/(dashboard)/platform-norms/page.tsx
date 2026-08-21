@@ -1,38 +1,52 @@
 'use client'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
+import { useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { useState, useEffect } from 'react'
-import { Loader2, Save } from 'lucide-react'
+import { PlusCircle, Pencil, Trash2, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Modal } from '@/components/ui/Modal'
+import { RichTextEditor } from '@/components/ui/RichTextEditor'
+import { RichTextDisplay } from '@/components/ui/RichTextDisplay'
 import { toast } from 'sonner'
+
+type PlatformNorm = { id: number; title: string; content: string }
 
 export default function PlatformNormsPage() {
   const { data: session } = useSession()
   const isAdmin = session?.user?.role === 'admin'
   const qc = useQueryClient()
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editing, setEditing] = useState<PlatformNorm | null>(null)
+  const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
-  const [editing, setEditing] = useState(false)
+  const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [openIdx, setOpenIdx] = useState<number | null>(0)
 
   const { data, isLoading } = useQuery({
     queryKey: ['platform-norms'],
-    queryFn: () => axios.get('/api/platform-norms').then(r => r.data),
+    queryFn: () => axios.get('/api/platform-norms').then(r => r.data as PlatformNorm[]),
   })
 
-  useEffect(() => {
-    if (data?.content) setContent(data.content)
-  }, [data])
-
   const save = useMutation({
-    mutationFn: () => axios.put('/api/platform-norms', { content }),
+    mutationFn: () => editing
+      ? axios.put(`/api/platform-norms/${editing.id}`, { title, content })
+      : axios.post('/api/platform-norms', { title, content }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['platform-norms'] })
-      setEditing(false)
-      toast.success('Normas actualizadas')
+      setModalOpen(false)
+      toast.success(editing ? 'Norma actualizada' : 'Norma creada')
     },
     onError: () => toast.error('Error al guardar'),
   })
 
-  if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-indigo-600" size={28} /></div>
+  const remove = useMutation({
+    mutationFn: (id: number) => axios.delete(`/api/platform-norms/${id}`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['platform-norms'] }); setDeleteId(null); toast.success('Norma eliminada') },
+    onError: () => toast.error('Error al eliminar'),
+  })
+
+  function openCreate() { setEditing(null); setTitle(''); setContent(''); setModalOpen(true) }
+  function openEdit(norm: PlatformNorm) { setEditing(norm); setTitle(norm.title); setContent(norm.content); setModalOpen(true) }
 
   return (
     <div className="max-w-2xl space-y-5">
@@ -41,39 +55,79 @@ export default function PlatformNormsPage() {
           <h1 className="text-xl font-bold text-slate-800">Normas de la Plataforma</h1>
           <p className="text-sm text-slate-500 mt-0.5">Reglas y lineamientos del sistema de tickets</p>
         </div>
-        {isAdmin && !editing && (
-          <button onClick={() => setEditing(true)} className="btn-secondary btn-sm">Editar</button>
+        {isAdmin && (
+          <button onClick={openCreate} className="btn-primary btn-sm"><PlusCircle size={15} /> Nueva Norma</button>
         )}
       </div>
 
-      {editing ? (
-        <div className="card p-6 space-y-4">
-          <textarea
-            value={content}
-            onChange={e => setContent(e.target.value)}
-            rows={16}
-            className="form-textarea font-mono text-sm"
-            placeholder="Escribí las normas en Markdown o texto plano..."
-          />
+      {isLoading ? (
+        <div className="flex justify-center py-10"><Loader2 className="animate-spin text-indigo-600" size={24} /></div>
+      ) : (
+        <div className="space-y-2">
+          {(data ?? []).length === 0 && (
+            <div className="card p-8 text-center text-slate-400">No hay normas configuradas todavía.</div>
+          )}
+          {(data ?? []).map((norm, idx) => (
+            <div key={norm.id} className="card overflow-hidden">
+              <button
+                onClick={() => setOpenIdx(openIdx === idx ? null : idx)}
+                className="w-full flex items-center justify-between p-5 text-left hover:bg-slate-50 transition-colors"
+              >
+                <span className="font-medium text-slate-800 pr-4">{norm.title}</span>
+                {openIdx === idx ? <ChevronUp size={18} className="text-slate-400 shrink-0" /> : <ChevronDown size={18} className="text-slate-400 shrink-0" />}
+              </button>
+              {openIdx === idx && (
+                <div className="px-5 pb-5 border-t border-slate-100 pt-4">
+                  <RichTextDisplay content={norm.content} />
+                  {isAdmin && (
+                    <div className="flex gap-2 mt-4">
+                      <button onClick={() => openEdit(norm)} className="btn-secondary btn-sm">
+                        <Pencil size={13} /> Editar
+                      </button>
+                      <button onClick={() => setDeleteId(norm.id)} className="btn-sm btn bg-red-50 text-red-600 border border-red-200 hover:bg-red-100">
+                        <Trash2 size={13} /> Eliminar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Editar Norma' : 'Nueva Norma'} size="lg">
+        <div className="space-y-4">
+          <div>
+            <label className="form-label">Título *</label>
+            <input value={title} onChange={e => setTitle(e.target.value)} className="form-input" placeholder="Ej: General, Uso del sistema, Horarios..." />
+          </div>
+          <div>
+            <label className="form-label">Descripción *</label>
+            <RichTextEditor
+              value={content}
+              onChange={setContent}
+              placeholder="Describí la norma. Podés resaltar texto en negrita/cursiva, usar listas y emojis 🙂"
+              minHeight="150px"
+            />
+          </div>
           <div className="flex justify-end gap-2">
-            <button onClick={() => setEditing(false)} className="btn-secondary">Cancelar</button>
-            <button onClick={() => save.mutate()} disabled={save.isPending} className="btn-primary">
-              {save.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              Guardar
+            <button onClick={() => setModalOpen(false)} className="btn-secondary">Cancelar</button>
+            <button onClick={() => save.mutate()} disabled={!title.trim() || !content.trim() || save.isPending} className="btn-primary">
+              {save.isPending ? <Loader2 size={13} className="animate-spin" /> : null}
+              {editing ? 'Guardar' : 'Crear'}
             </button>
           </div>
         </div>
-      ) : (
-        <div className="card p-6">
-          {content ? (
-            <div className="prose prose-slate max-w-none text-sm whitespace-pre-wrap leading-relaxed text-slate-700">
-              {content}
-            </div>
-          ) : (
-            <p className="text-slate-400 text-center py-6">No hay normas configuradas todavía.</p>
-          )}
+      </Modal>
+
+      <Modal open={deleteId !== null} onClose={() => setDeleteId(null)} title="Eliminar Norma" size="sm">
+        <p className="text-slate-600 mb-4">¿Eliminás esta norma de la plataforma?</p>
+        <div className="flex justify-end gap-2">
+          <button onClick={() => setDeleteId(null)} className="btn-secondary">Cancelar</button>
+          <button onClick={() => remove.mutate(deleteId!)} className="btn-danger">Eliminar</button>
         </div>
-      )}
+      </Modal>
     </div>
   )
 }

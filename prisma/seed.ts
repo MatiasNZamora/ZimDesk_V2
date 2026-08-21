@@ -172,32 +172,55 @@ async function main() {
     await prisma.faq.upsert({ where: { id: f.id }, update: { question: f.question, answer: f.answer }, create: f })
   }
 
-  // ─── NORMA DE PLATAFORMA ─────────────────────────────────────
-  await prisma.platformNorm.upsert({
-    where: { id: 1 },
-    update: { content: `# Normas de la Plataforma ZimDesk
-
-## 1. Creación de Tickets
-- Describir el problema con el mayor detalle posible.
-- Incluir los pasos para reproducir el error.
-- Adjuntar capturas de pantalla o archivos relevantes.
-- Un ticket por problema — no agrupar múltiples incidencias.
-
-## 2. Comunicación
-- Responder dentro de las 24 horas hábiles cuando el agente solicite información.
-- Mantener un tono respetuoso en todas las comunicaciones.
-- No escalar a otros canales mientras el ticket está activo.
-
-## 3. Seguimiento
-- Si no recibís respuesta en 48 horas, podés hacer una consulta de seguimiento en el mismo ticket.
-- Ante dudas generales, consultá primero las FAQs antes de abrir un ticket.
-
-## 4. Cierre de Tickets
-- Un ticket se cierra cuando el problema queda resuelto.
-- Si el problema reaparece, usar el botón "Reabrir" en lugar de crear uno nuevo.
-- Tickets sin actividad por más de 7 días se cierran automáticamente.` },
-    create: { content: '# Normas de la Plataforma ZimDesk\n\nVer contenido completo.' },
-  })
+  // ─── NORMAS DE PLATAFORMA ────────────────────────────────────
+  const platformNorms: { id: number; title: string; content: string }[] = [
+    {
+      id: 1,
+      title: 'General',
+      content: '<p>Normas y lineamientos generales para el uso del sistema de tickets de ZimDesk. 📋</p>',
+    },
+    {
+      id: 2,
+      title: 'Creación de Tickets',
+      content:
+        '<ul><li>Describir el problema con el mayor detalle posible.</li>' +
+        '<li>Incluir los pasos para reproducir el error.</li>' +
+        '<li>Adjuntar capturas de pantalla o archivos relevantes.</li>' +
+        '<li>Un ticket por problema — no agrupar múltiples incidencias.</li></ul>',
+    },
+    {
+      id: 3,
+      title: 'Comunicación',
+      content:
+        '<ul><li>Responder dentro de las 24 horas hábiles cuando el agente solicite información.</li>' +
+        '<li>Mantener un tono respetuoso en todas las comunicaciones. 🙏</li>' +
+        '<li>No escalar a otros canales mientras el ticket está activo.</li></ul>',
+    },
+    {
+      id: 4,
+      title: 'Seguimiento',
+      content:
+        '<ul><li>Si no recibís respuesta en 48 horas, podés hacer una consulta de seguimiento en el mismo ticket.</li>' +
+        '<li>Ante dudas generales, consultá primero las FAQs antes de abrir un ticket.</li></ul>',
+    },
+    {
+      id: 5,
+      title: 'Cierre de Tickets',
+      content:
+        '<ul><li>Un ticket se cierra cuando el problema queda resuelto. ✅</li>' +
+        '<li>Si el problema reaparece, usar el botón "Reabrir" en lugar de crear uno nuevo.</li>' +
+        '<li>Tickets sin actividad por más de 7 días se cierran automáticamente.</li></ul>',
+    },
+  ]
+  for (const { id, title, content } of platformNorms) {
+    await prisma.platformNorm.upsert({ where: { id }, update: { title, content }, create: { id, title, content } })
+  }
+  // Insertar con id explícito no mueve la secuencia de autoincremento — sin este ajuste,
+  // el próximo prisma.platformNorm.create() (crear una norma nueva desde la UI) choca
+  // con un id ya usado por el seed.
+  await prisma.$executeRawUnsafe(
+    `SELECT setval('"PlatformNorm_id_seq"', (SELECT COALESCE(MAX(id), 1) FROM "PlatformNorm"))`
+  )
 
   console.log('✅ FAQs y normas creadas')
 
