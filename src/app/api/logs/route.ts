@@ -11,6 +11,9 @@ export async function GET(req: NextRequest) {
   const perPage  = Number(searchParams.get('perPage') ?? 50)
   const search   = searchParams.get('search') ?? ''
   const ticketId = searchParams.get('ticketId')
+  const userRole = searchParams.get('userRole')
+  const dateFrom = searchParams.get('dateFrom')
+  const dateTo   = searchParams.get('dateTo')
 
   const where: any = {}
   if (search) {
@@ -21,6 +24,12 @@ export async function GET(req: NextRequest) {
     ]
   }
   if (ticketId) where.ticketId = Number(ticketId)
+  if (userRole) where.user = { role: userRole }
+  if (dateFrom || dateTo) {
+    where.createdAt = {}
+    if (dateFrom) where.createdAt.gte = new Date(dateFrom)
+    if (dateTo)   where.createdAt.lte = new Date(`${dateTo}T23:59:59`)
+  }
 
   const [data, total] = await Promise.all([
     prisma.log.findMany({

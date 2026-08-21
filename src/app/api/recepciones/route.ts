@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const page          = Math.max(1, Number(searchParams.get('page') ?? 1))
-  const limit         = Math.min(100, Math.max(1, Number(searchParams.get('limit') ?? 50)))
+  const limit         = Math.min(200, Math.max(1, Number(searchParams.get('limit') ?? 50)))
   const status        = searchParams.get('status') ?? undefined
   const estructuraId  = searchParams.get('estructuraId') ? Number(searchParams.get('estructuraId')) : undefined
   const responsibleId = searchParams.get('responsibleId') ? Number(searchParams.get('responsibleId')) : undefined

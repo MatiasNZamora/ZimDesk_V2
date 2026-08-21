@@ -11,18 +11,33 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url)
-  const statusId   = searchParams.get('statusId')
-  const priorityId = searchParams.get('priorityId')
-  const search     = searchParams.get('search') ?? ''
-  const view       = searchParams.get('view') ?? 'gestion'
-  const userId     = Number(session.user.id)
-  const role       = session.user.role
+  const statusId    = searchParams.get('statusId')
+  const statusGroup = searchParams.get('statusGroup')
+  const priorityId  = searchParams.get('priorityId')
+  const agentId     = searchParams.get('agentId')
+  const categoryId  = searchParams.get('categoryId')
+  const dateFrom    = searchParams.get('dateFrom')
+  const dateTo      = searchParams.get('dateTo')
+  const slaBreached = searchParams.get('slaBreached') === 'true'
+  const search      = searchParams.get('search') ?? ''
+  const view        = searchParams.get('view') ?? 'gestion'
+  const userId      = Number(session.user.id)
+  const role        = session.user.role
 
   const where: any = {}
   if (role === 'agent') where.assignedTo = userId
   if (role === 'admin' && view === 'conformidad') where.status = { slug: { in: ['resuelto', 'cerrado'] } }
-  if (statusId)   where.statusId   = Number(statusId)
+  if (statusGroup === 'en_proceso') where.statusId = { in: [2, 3, 4] }
+  else if (statusId) where.statusId = Number(statusId)
   if (priorityId) where.priorityId = Number(priorityId)
+  if (agentId) where.assignedTo = Number(agentId)
+  if (categoryId) where.categoryId = Number(categoryId)
+  if (slaBreached) { where.slaAlertedAt = { not: null }; where.firstResponseAt = null }
+  if (dateFrom || dateTo) {
+    where.createdAt = {}
+    if (dateFrom) where.createdAt.gte = new Date(dateFrom)
+    if (dateTo)   where.createdAt.lte = new Date(`${dateTo}T23:59:59`)
+  }
   if (search) {
     const orConditions: object[] = [{ subject: { contains: search, mode: 'insensitive' } }]
     if (!isNaN(Number(search))) orConditions.push({ id: Number(search) })

@@ -6,9 +6,17 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { PlusCircle, Loader2, MoreHorizontal, FileText, Download, Clipboard, MessageCircle, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { StatusBadge, ConditionBadge, STATUS_OPTIONS } from '@/components/recepciones/ReceptionBadges'
+import { StatusBadge, ConditionBadge, STATUS_OPTIONS, CONDITION_OPTIONS } from '@/components/recepciones/ReceptionBadges'
 import { ReceptionDetailModal } from '@/components/recepciones/ReceptionDetailModal'
 import { Modal } from '@/components/ui/Modal'
+import {
+  FilterConfigModal,
+  GearFilterButton,
+  type FilterDef,
+  type FilterValues,
+  type FilterVisibility,
+} from '@/components/ui/FilterConfigModal'
+import { useFilterConfig } from '@/hooks/useFilterConfig'
 
 type Reception = {
   id: number
@@ -23,11 +31,17 @@ type Reception = {
   observations: string | null
   contactName: string | null
   contactPhone: string | null
-  category: { name: string } | null
+  category: { id: number; name: string } | null
   estructura: { id: number; name: string } | null
   department: { id: number; name: string } | null
   responsible: { id: number; name: string; email: string } | null
   createdAt: string
+}
+
+const RECEPCIONES_DEFAULT_VISIBILITY: FilterVisibility = {
+  search: true, status: true, condition: true,
+  estructuraId: false, categoryId: false, responsibleId: false,
+  dateFrom: false, dateTo: false, pendienteEntrega: false,
 }
 
 export default function RecepcionesPage() {
@@ -39,6 +53,14 @@ export default function RecepcionesPage() {
 
   const [search,     setSearch]     = useState('')
   const [filterStatus, setFilterStatus] = useState('')
+  const [condition,  setCondition]  = useState('')
+  const [estructuraId,  setEstructuraId]  = useState('')
+  const [categoryId,    setCategoryId]    = useState('')
+  const [responsibleId, setResponsibleId] = useState('')
+  const [dateFrom,   setDateFrom]   = useState('')
+  const [dateTo,     setDateTo]     = useState('')
+  const [pendienteEntrega, setPendienteEntrega] = useState(false)
+  const [showFilterModal, setShowFilterModal] = useState(false)
   const [detail,     setDetail]     = useState<Reception | null>(null)
   const [deleteId,   setDeleteId]   = useState<number | null>(null)
   const [openMenu,   setOpenMenu]   = useState<number | null>(null)
@@ -48,8 +70,49 @@ export default function RecepcionesPage() {
     queryFn: () => axios.get('/api/recepciones?limit=200').then(r => r.data.data as Reception[]),
   })
 
+  const estructuraOptions = useMemo(() => {
+    const map = new Map<number, string>()
+    for (const r of data ?? []) if (r.estructura) map.set(r.estructura.id, r.estructura.name)
+    return Array.from(map.entries()).map(([value, label]) => ({ value: String(value), label })).sort((a, b) => a.label.localeCompare(b.label))
+  }, [data])
+
+  const categoryOptions = useMemo(() => {
+    const map = new Map<number, string>()
+    for (const r of data ?? []) if (r.category) map.set(r.category.id, r.category.name)
+    return Array.from(map.entries()).map(([value, label]) => ({ value: String(value), label })).sort((a, b) => a.label.localeCompare(b.label))
+  }, [data])
+
+  const responsibleOptions = useMemo(() => {
+    const map = new Map<number, string>()
+    for (const r of data ?? []) if (r.responsible) map.set(r.responsible.id, r.responsible.name)
+    return Array.from(map.entries()).map(([value, label]) => ({ value: String(value), label })).sort((a, b) => a.label.localeCompare(b.label))
+  }, [data])
+
+  const filterDefs = useMemo<FilterDef[]>(() => [
+    { key: 'search', label: 'Búsqueda', type: 'text', defaultValue: '' },
+    { key: 'status', label: 'Estado', type: 'select', defaultValue: '', options: STATUS_OPTIONS },
+    { key: 'condition', label: 'Condición', type: 'select', defaultValue: '', options: CONDITION_OPTIONS },
+    { key: 'estructuraId', label: 'Sucursal', type: 'select', defaultValue: '', options: estructuraOptions },
+    { key: 'categoryId', label: 'Categoría', type: 'select', defaultValue: '', options: categoryOptions },
+    { key: 'responsibleId', label: 'Responsable', type: 'select', defaultValue: '', options: responsibleOptions },
+    { key: 'dateFrom', label: 'Ingreso desde', type: 'date', defaultValue: '' },
+    { key: 'dateTo', label: 'Ingreso hasta', type: 'date', defaultValue: '' },
+    { key: 'pendienteEntrega', label: 'Pendiente de entrega', type: 'boolean', defaultValue: false },
+  ], [estructuraOptions, categoryOptions, responsibleOptions])
+
+  const filterValues: FilterValues = {
+    search, status: filterStatus, condition, estructuraId, categoryId, responsibleId,
+    dateFrom, dateTo, pendienteEntrega,
+  }
+
+  const { visibility, setVisibility, activeFilterCount } = useFilterConfig(
+    'recepciones', filterDefs, filterValues, RECEPCIONES_DEFAULT_VISIBILITY,
+  )
+
   const filtered = useMemo(() => {
     if (!data) return []
+    const from = dateFrom ? new Date(dateFrom) : null
+    const to   = dateTo ? new Date(`${dateTo}T23:59:59`) : null
     return data.filter(r => {
       const q = search.toLowerCase()
       const matchSearch = !q ||
@@ -60,10 +123,19 @@ export default function RecepcionesPage() {
         r.department?.name.toLowerCase().includes(q) ||
         r.responsible?.name.toLowerCase().includes(q) ||
         r.category?.name.toLowerCase().includes(q)
-      const matchStatus = !filterStatus || r.status === filterStatus
-      return matchSearch && matchStatus
+      const matchStatus       = !filterStatus || r.status === filterStatus
+      const matchCondition    = !condition || r.condition === condition
+      const matchEstructura   = !estructuraId || r.estructura?.id === Number(estructuraId)
+      const matchCategory     = !categoryId || r.category?.id === Number(categoryId)
+      const matchResponsible  = !responsibleId || r.responsible?.id === Number(responsibleId)
+      const intake = new Date(r.intakeDate)
+      const matchFrom = !from || intake >= from
+      const matchTo   = !to || intake <= to
+      const matchPendiente = !pendienteEntrega || r.deliverySignatureBase64 === null
+      return matchSearch && matchStatus && matchCondition && matchEstructura &&
+        matchCategory && matchResponsible && matchFrom && matchTo && matchPendiente
     })
-  }, [data, search, filterStatus])
+  }, [data, search, filterStatus, condition, estructuraId, categoryId, responsibleId, dateFrom, dateTo, pendienteEntrega])
 
   const remove = useMutation({
     mutationFn: (id: number) => axios.delete(`/api/recepciones/${id}`),
@@ -99,17 +171,58 @@ export default function RecepcionesPage() {
       </div>
 
       {/* Filtros */}
-      <div className="flex gap-3 flex-wrap">
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Buscar por número, equipo, cliente..."
-          className="form-input flex-1 min-w-48"
-        />
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="form-input w-48">
-          <option value="">Todos los estados</option>
-          {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-        </select>
+      <div className="flex gap-3 flex-wrap items-center">
+        {visibility.search && (
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar por número, equipo, cliente..."
+            className="form-input flex-1 min-w-48"
+          />
+        )}
+        {visibility.status && (
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="form-select w-48">
+            <option value="">Todos los estados</option>
+            {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+        )}
+        {visibility.condition && (
+          <select value={condition} onChange={e => setCondition(e.target.value)} className="form-select w-40">
+            <option value="">Todas las condiciones</option>
+            {CONDITION_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+        )}
+        {visibility.estructuraId && (
+          <select value={estructuraId} onChange={e => setEstructuraId(e.target.value)} className="form-select w-48">
+            <option value="">Todas las sucursales</option>
+            {estructuraOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        )}
+        {visibility.categoryId && (
+          <select value={categoryId} onChange={e => setCategoryId(e.target.value)} className="form-select w-48">
+            <option value="">Todas las categorías</option>
+            {categoryOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        )}
+        {visibility.responsibleId && (
+          <select value={responsibleId} onChange={e => setResponsibleId(e.target.value)} className="form-select w-48">
+            <option value="">Todos los responsables</option>
+            {responsibleOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        )}
+        {visibility.dateFrom && (
+          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="form-input w-40" />
+        )}
+        {visibility.dateTo && (
+          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="form-input w-40" />
+        )}
+        {visibility.pendienteEntrega && (
+          <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 px-1">
+            <input type="checkbox" checked={pendienteEntrega} onChange={e => setPendienteEntrega(e.target.checked)} className="h-4 w-4 accent-indigo-600 rounded" />
+            Pendiente de entrega
+          </label>
+        )}
+        <GearFilterButton activeFilterCount={activeFilterCount} onClick={() => setShowFilterModal(true)} />
       </div>
 
       {/* Tabla */}
@@ -195,6 +308,26 @@ export default function RecepcionesPage() {
       </div>
 
       <ReceptionDetailModal reception={detail} onClose={() => setDetail(null)} canEdit={canEdit} isAdmin={role === 'admin'} />
+
+      <FilterConfigModal
+        isOpen={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        filterDefs={filterDefs}
+        values={filterValues}
+        visibility={visibility}
+        onApply={(newValues, newVisibility) => {
+          setSearch(newValues.search as string)
+          setFilterStatus(newValues.status as string)
+          setCondition(newValues.condition as string)
+          setEstructuraId(newValues.estructuraId as string)
+          setCategoryId(newValues.categoryId as string)
+          setResponsibleId(newValues.responsibleId as string)
+          setDateFrom(newValues.dateFrom as string)
+          setDateTo(newValues.dateTo as string)
+          setPendienteEntrega(newValues.pendienteEntrega as boolean)
+          setVisibility(newVisibility)
+        }}
+      />
 
       <Modal open={deleteId !== null} onClose={() => setDeleteId(null)} title="Eliminar Recepción" size="sm">
         <p className="text-slate-600 mb-4">¿Eliminás esta recepción? La acción no se puede deshacer desde la interfaz.</p>

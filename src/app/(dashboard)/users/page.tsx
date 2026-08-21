@@ -1,7 +1,7 @@
 'use client'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { PlusCircle, Search, Pencil, Trash2, Loader2 } from 'lucide-react'
 import { RoleBadge } from '@/components/ui/Badge'
 import { Pagination } from '@/components/ui/Pagination'
@@ -11,6 +11,30 @@ import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { MODULES, MODULE_LABELS, buildPermissionsMap, type OperatorPermissions, type Module } from '@/lib/permissionsShared'
+import {
+  FilterConfigModal,
+  GearFilterButton,
+  type FilterDef,
+  type FilterValues,
+  type FilterVisibility,
+} from '@/components/ui/FilterConfigModal'
+import { useFilterConfig } from '@/hooks/useFilterConfig'
+
+const ROLE_OPTIONS = [
+  { value: 'client',   label: 'Cliente' },
+  { value: 'agent',    label: 'Agente' },
+  { value: 'gerente',  label: 'Gerente' },
+  { value: 'operador', label: 'Operador' },
+  { value: 'admin',    label: 'Admin' },
+]
+const ACTIVE_OPTIONS = [
+  { value: 'true',  label: 'Activos' },
+  { value: 'false', label: 'Inactivos' },
+]
+
+const USERS_DEFAULT_VISIBILITY: FilterVisibility = {
+  search: true, role: true, active: false, estructuraId: false, departmentId: false,
+}
 
 const schema = z.object({
   name: z.string().min(2, 'Mínimo 2 caracteres'),
@@ -132,15 +156,35 @@ export default function UsersPage() {
   const qc = useQueryClient()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [roleFilter, setRoleFilter] = useState('')
+  const [activeFilter, setActiveFilter] = useState('')
+  const [filterEstructuraId, setFilterEstructuraId] = useState('')
+  const [filterDepartmentId, setFilterDepartmentId] = useState('')
+  const [showFilterModal, setShowFilterModal] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null)
   const [selectedEstructura, setSelectedEstructura] = useState<string>('')
   const [operatorPerms, setOperatorPerms] = useState<OperatorPermissions>({})
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 350)
+    return () => clearTimeout(t)
+  }, [search])
+
   const { data, isLoading } = useQuery({
-    queryKey: ['users', page, search],
-    queryFn: () => axios.get('/api/users', { params: { page, search, perPage: 25 } }).then(r => r.data),
+    queryKey: ['users', page, debouncedSearch, roleFilter, activeFilter, filterEstructuraId, filterDepartmentId],
+    queryFn: () => axios.get('/api/users', {
+      params: {
+        page, perPage: 25,
+        search: debouncedSearch || undefined,
+        role: roleFilter || undefined,
+        active: activeFilter || undefined,
+        estructuraId: filterEstructuraId || undefined,
+        departmentId: filterDepartmentId || undefined,
+      },
+    }).then(r => r.data),
   })
 
   const { data: estructuras } = useQuery({
@@ -154,6 +198,31 @@ export default function UsersPage() {
       params: selectedEstructura ? { estructuraId: selectedEstructura } : {},
     }).then(r => r.data),
   })
+
+  const { data: filterDepartments } = useQuery({
+    queryKey: ['departments', 'filter', filterEstructuraId],
+    queryFn: () => axios.get('/api/departments', {
+      params: filterEstructuraId ? { estructuraId: filterEstructuraId } : {},
+    }).then(r => r.data),
+  })
+
+  const filterDefs = useMemo<FilterDef[]>(() => [
+    { key: 'search', label: 'Búsqueda', type: 'text', defaultValue: '' },
+    { key: 'role', label: 'Rol', type: 'select', defaultValue: '', options: ROLE_OPTIONS },
+    { key: 'active', label: 'Estado', type: 'select', defaultValue: '', options: ACTIVE_OPTIONS },
+    { key: 'estructuraId', label: 'Empresa', type: 'select', defaultValue: '',
+      options: (estructuras ?? []).map((e: any) => ({ value: String(e.id), label: e.name })) },
+    { key: 'departmentId', label: 'Departamento', type: 'select', defaultValue: '',
+      options: (filterDepartments ?? []).map((d: any) => ({ value: String(d.id), label: d.name })) },
+  ], [estructuras, filterDepartments])
+
+  const filterValues: FilterValues = {
+    search, role: roleFilter, active: activeFilter, estructuraId: filterEstructuraId, departmentId: filterDepartmentId,
+  }
+
+  const { visibility, setVisibility, activeFilterCount } = useFilterConfig(
+    'usuarios', filterDefs, filterValues, USERS_DEFAULT_VISIBILITY,
+  )
 
   const { register, handleSubmit, reset, setValue, control, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -222,16 +291,43 @@ export default function UsersPage() {
         </button>
       </div>
 
-      <div className="card p-4 flex gap-3">
-        <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1) }}
-            placeholder="Buscar por nombre o email..."
-            className="form-input pl-9"
-          />
-        </div>
+      <div className="card p-4 flex flex-wrap gap-3 items-center">
+        {visibility.search && (
+          <div className="relative flex-1 min-w-48">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1) }}
+              placeholder="Buscar por nombre o email..."
+              className="form-input pl-9"
+            />
+          </div>
+        )}
+        {visibility.role && (
+          <select value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setPage(1) }} className="form-select w-44">
+            <option value="">Todos los roles</option>
+            {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+          </select>
+        )}
+        {visibility.active && (
+          <select value={activeFilter} onChange={e => { setActiveFilter(e.target.value); setPage(1) }} className="form-select w-40">
+            <option value="">Todos</option>
+            {ACTIVE_OPTIONS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
+          </select>
+        )}
+        {visibility.estructuraId && (
+          <select value={filterEstructuraId} onChange={e => { setFilterEstructuraId(e.target.value); setFilterDepartmentId(''); setPage(1) }} className="form-select w-48">
+            <option value="">Todas las empresas</option>
+            {(estructuras ?? []).map((e: any) => <option key={e.id} value={e.id}>{e.name}</option>)}
+          </select>
+        )}
+        {visibility.departmentId && (
+          <select value={filterDepartmentId} onChange={e => { setFilterDepartmentId(e.target.value); setPage(1) }} className="form-select w-48">
+            <option value="">Todos los departamentos</option>
+            {(filterDepartments ?? []).map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </select>
+        )}
+        <GearFilterButton activeFilterCount={activeFilterCount} onClick={() => setShowFilterModal(true)} />
       </div>
 
       <div className="card overflow-hidden">
@@ -410,6 +506,23 @@ export default function UsersPage() {
           </button>
         </div>
       </Modal>
+
+      <FilterConfigModal
+        isOpen={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        filterDefs={filterDefs}
+        values={filterValues}
+        visibility={visibility}
+        onApply={(newValues, newVisibility) => {
+          setSearch(newValues.search as string)
+          setRoleFilter(newValues.role as string)
+          setActiveFilter(newValues.active as string)
+          setFilterEstructuraId(newValues.estructuraId as string)
+          setFilterDepartmentId(newValues.departmentId as string)
+          setVisibility(newVisibility)
+          setPage(1)
+        }}
+      />
     </div>
   )
 }

@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Dropdown de clientes para el módulo de recepciones (accesible para agent/admin/gerente/operador)
-  if (roleFilter === 'client' && ['agent', 'admin', 'gerente', 'operador'].includes(session.user.role)) {
+  if (roleFilter === 'client' && !searchParams.get('page') && ['agent', 'admin', 'gerente', 'operador'].includes(session.user.role)) {
     const clientsList = await prisma.user.findMany({
       where: { role: 'client', active: true },
       select: { id: true, name: true, email: true, phone: true },
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Dropdown de staff (admin+agent+operador) para el responsable de recepción
-  if (roleFilter === 'staff' && ['agent', 'admin', 'gerente', 'operador'].includes(session.user.role)) {
+  if (roleFilter === 'staff' && !searchParams.get('page') && ['agent', 'admin', 'gerente', 'operador'].includes(session.user.role)) {
     const staff = await prisma.user.findMany({
       where: { role: { in: ['admin', 'agent', 'operador'] }, active: true },
       select: { id: true, name: true, email: true, role: true },
@@ -71,6 +71,9 @@ export async function GET(req: NextRequest) {
   const search = searchParams.get('search') ?? ''
   const page = Number(searchParams.get('page') ?? 1)
   const perPage = Number(searchParams.get('perPage') ?? 25)
+  const activeFilter = searchParams.get('active')
+  const estructuraId = searchParams.get('estructuraId')
+  const departmentId = searchParams.get('departmentId')
 
   const where: any = {}
   if (search) {
@@ -80,6 +83,10 @@ export async function GET(req: NextRequest) {
     ]
   }
   if (roleFilter) where.role = roleFilter
+  if (activeFilter === 'true') where.active = true
+  else if (activeFilter === 'false') where.active = false
+  if (departmentId) where.departmentId = Number(departmentId)
+  else if (estructuraId) where.department = { estructuraId: Number(estructuraId) }
 
   const [data, total] = await Promise.all([
     prisma.user.findMany({

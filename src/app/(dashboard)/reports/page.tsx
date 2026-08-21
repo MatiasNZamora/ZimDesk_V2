@@ -8,10 +8,38 @@ import { Search, Loader2, ExternalLink } from 'lucide-react'
 import { Pagination } from '@/components/ui/Pagination'
 import { formatDate } from '@/lib/utils'
 import Link from 'next/link'
+import {
+  FilterConfigModal,
+  GearFilterButton,
+  type FilterDef,
+  type FilterValues,
+  type FilterVisibility,
+} from '@/components/ui/FilterConfigModal'
+import { useFilterConfig } from '@/hooks/useFilterConfig'
 
 const ROLE_LABEL: Record<string, string> = {
   admin: 'Admin', agent: 'Agente', client: 'Cliente',
 }
+
+const ROLE_OPTIONS = [
+  { value: 'admin',  label: 'Admin' },
+  { value: 'agent',  label: 'Agente' },
+  { value: 'gerente', label: 'Gerente' },
+  { value: 'operador', label: 'Operador' },
+  { value: 'client', label: 'Cliente' },
+]
+
+const AUDITORIA_DEFAULT_VISIBILITY: FilterVisibility = {
+  search: true, userRole: false, ticketId: false, dateFrom: false, dateTo: false,
+}
+
+const AUDITORIA_FILTER_DEFS: FilterDef[] = [
+  { key: 'search', label: 'Búsqueda', type: 'text', defaultValue: '' },
+  { key: 'userRole', label: 'Rol del usuario', type: 'select', defaultValue: '', options: ROLE_OPTIONS },
+  { key: 'ticketId', label: 'ID de ticket', type: 'text', defaultValue: '' },
+  { key: 'dateFrom', label: 'Fecha desde', type: 'date', defaultValue: '' },
+  { key: 'dateTo', label: 'Fecha hasta', type: 'date', defaultValue: '' },
+]
 
 function ReportsContent() {
   const { data: session, status } = useSession()
@@ -19,11 +47,22 @@ function ReportsContent() {
   const [page, setPage]       = useState(1)
   const [search, setSearch]   = useState('')
   const [debounced, setDebounced] = useState('')
+  const [userRole, setUserRole]   = useState('')
+  const [ticketId, setTicketId]   = useState('')
+  const [dateFrom, setDateFrom]   = useState('')
+  const [dateTo, setDateTo]       = useState('')
+  const [showFilterModal, setShowFilterModal] = useState(false)
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search), 350)
     return () => clearTimeout(t)
   }, [search])
+
+  const filterValues: FilterValues = { search, userRole, ticketId, dateFrom, dateTo }
+
+  const { visibility, setVisibility, activeFilterCount } = useFilterConfig(
+    'auditoria', AUDITORIA_FILTER_DEFS, filterValues, AUDITORIA_DEFAULT_VISIBILITY,
+  )
 
   // Redirigir si no es admin
   useEffect(() => {
@@ -33,9 +72,18 @@ function ReportsContent() {
   }, [status, session, router])
 
   const { data, isLoading } = useQuery({
-    queryKey: ['logs', page, debounced],
+    queryKey: ['logs', page, debounced, userRole, ticketId, dateFrom, dateTo],
     queryFn: () =>
-      axios.get('/api/logs', { params: { page, search: debounced, perPage: 50 } }).then(r => r.data),
+      axios.get('/api/logs', {
+        params: {
+          page, perPage: 50,
+          search: debounced || undefined,
+          userRole: userRole || undefined,
+          ticketId: ticketId || undefined,
+          dateFrom: dateFrom || undefined,
+          dateTo: dateTo || undefined,
+        },
+      }).then(r => r.data),
     enabled: session?.user?.role === 'admin',
   })
 
@@ -59,17 +107,40 @@ function ReportsContent() {
         )}
       </div>
 
-      {/* Buscador */}
-      <div className="card p-4">
-        <div className="relative">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+      {/* Filtros */}
+      <div className="card p-4 flex flex-wrap gap-3 items-center">
+        {visibility.search && (
+          <div className="relative flex-1 min-w-48">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1) }}
+              placeholder="Buscar por acción, usuario o ticket..."
+              className="form-input pl-9"
+            />
+          </div>
+        )}
+        {visibility.userRole && (
+          <select value={userRole} onChange={e => { setUserRole(e.target.value); setPage(1) }} className="form-select w-44">
+            <option value="">Todos los roles</option>
+            {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+          </select>
+        )}
+        {visibility.ticketId && (
           <input
-            value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1) }}
-            placeholder="Buscar por acción, usuario o ticket..."
-            className="form-input pl-9"
+            value={ticketId}
+            onChange={e => { setTicketId(e.target.value); setPage(1) }}
+            placeholder="ID de ticket..."
+            className="form-input w-36"
           />
-        </div>
+        )}
+        {visibility.dateFrom && (
+          <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1) }} className="form-input w-40" />
+        )}
+        {visibility.dateTo && (
+          <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1) }} className="form-input w-40" />
+        )}
+        <GearFilterButton activeFilterCount={activeFilterCount} onClick={() => setShowFilterModal(true)} />
       </div>
 
       {/* Tabla */}
@@ -147,6 +218,23 @@ function ReportsContent() {
           </>
         )}
       </div>
+
+      <FilterConfigModal
+        isOpen={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        filterDefs={AUDITORIA_FILTER_DEFS}
+        values={filterValues}
+        visibility={visibility}
+        onApply={(newValues, newVisibility) => {
+          setSearch(newValues.search as string)
+          setUserRole(newValues.userRole as string)
+          setTicketId(newValues.ticketId as string)
+          setDateFrom(newValues.dateFrom as string)
+          setDateTo(newValues.dateTo as string)
+          setVisibility(newVisibility)
+          setPage(1)
+        }}
+      />
     </div>
   )
 }

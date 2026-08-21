@@ -3,7 +3,7 @@ import { useSession } from 'next-auth/react'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams, useRouter } from 'next/navigation'
 import axios from 'axios'
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import Link from 'next/link'
 import { PlusCircle, Search, Loader2, Download, AlertTriangle, ChevronRight } from 'lucide-react'
 import { StatusBadge } from '@/components/ui/Badge'
@@ -11,6 +11,19 @@ import { PriorityBadge } from '@/components/ui/Badge'
 import { Pagination } from '@/components/ui/Pagination'
 import { formatDate, timeAgo } from '@/lib/utils'
 import type { TicketWithRelations, PaginatedResponse } from '@/types'
+import {
+  FilterConfigModal,
+  GearFilterButton,
+  type FilterDef,
+  type FilterValues,
+  type FilterVisibility,
+} from '@/components/ui/FilterConfigModal'
+import { useFilterConfig } from '@/hooks/useFilterConfig'
+
+const TICKETS_DEFAULT_VISIBILITY: FilterVisibility = {
+  search: true, status: true, priority: true,
+  agentId: false, categoryId: false, dateFrom: false, dateTo: false, slaBreached: false,
+}
 
 function Avatar({ name }: { name: string }) {
   const initials = name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
@@ -42,6 +55,12 @@ function TicketsContent() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [priorityId, setPriorityId] = useState('')
+  const [agentId, setAgentId]       = useState('')
+  const [categoryId, setCategoryId] = useState('')
+  const [dateFrom, setDateFrom]     = useState('')
+  const [dateTo, setDateTo]         = useState('')
+  const [slaBreached, setSlaBreached] = useState(false)
+  const [showFilterModal, setShowFilterModal] = useState(false)
 
   // Debounce: esperar 350ms antes de disparar la query
   useEffect(() => {
@@ -55,7 +74,7 @@ function TicketsContent() {
   const view = viewFromUrl ?? defaultView
 
   const { data, isLoading } = useQuery<PaginatedResponse<TicketWithRelations>>({
-    queryKey: ['tickets', page, debouncedSearch, statusFilter, priorityId, view],
+    queryKey: ['tickets', page, debouncedSearch, statusFilter, priorityId, agentId, categoryId, dateFrom, dateTo, slaBreached, view],
     queryFn: () => {
       const isGroup = statusFilter === 'en_proceso'
       return axios.get('/api/tickets', {
@@ -65,6 +84,11 @@ function TicketsContent() {
           statusId:    isGroup ? undefined : (statusFilter || undefined),
           statusGroup: isGroup ? 'en_proceso' : undefined,
           priorityId:  priorityId || undefined,
+          agentId:     agentId || undefined,
+          categoryId:  categoryId || undefined,
+          dateFrom:    dateFrom || undefined,
+          dateTo:      dateTo || undefined,
+          slaBreached: slaBreached || undefined,
           view,
           perPage: 25,
         },
@@ -81,6 +105,52 @@ function TicketsContent() {
     queryKey: ['priorities'],
     queryFn: () => axios.get('/api/priorities').then(r => r.data),
   })
+
+  const { data: agents } = useQuery({
+    queryKey: ['users', 'agent'],
+    queryFn: () => axios.get('/api/users', { params: { role: 'agent' } }).then(r => r.data),
+    enabled: role !== 'client',
+  })
+
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => axios.get('/api/categories').then(r => r.data),
+  })
+
+  const filterDefs = useMemo<FilterDef[]>(() => [
+    { key: 'search', label: 'Búsqueda', type: 'text', defaultValue: '' },
+    { key: 'status', label: 'Estado', type: 'select', defaultValue: '',
+      options: [{ value: 'en_proceso', label: 'En Proceso' }, ...(statuses ?? []).filter((s: any) => ![2, 3, 4].includes(s.id)).map((s: any) => ({ value: String(s.id), label: s.name }))] },
+    { key: 'priority', label: 'Prioridad', type: 'select', defaultValue: '',
+      options: (priorities ?? []).map((p: any) => ({ value: String(p.id), label: p.name })) },
+    { key: 'agentId', label: 'Agente', type: 'select', defaultValue: '',
+      options: (agents ?? []).map((a: any) => ({ value: String(a.id), label: a.name })) },
+    { key: 'categoryId', label: 'Categoría', type: 'select', defaultValue: '',
+      options: (categories ?? []).map((c: any) => ({ value: String(c.id), label: c.name })) },
+    { key: 'dateFrom', label: 'Creado desde', type: 'date', defaultValue: '' },
+    { key: 'dateTo', label: 'Creado hasta', type: 'date', defaultValue: '' },
+    { key: 'slaBreached', label: 'SLA incumplido', type: 'boolean', defaultValue: false },
+  ], [statuses, priorities, agents, categories])
+
+  const filterValues: FilterValues = {
+    search, status: statusFilter, priority: priorityId, agentId, categoryId, dateFrom, dateTo, slaBreached,
+  }
+
+  const { visibility, setVisibility, activeFilterCount } = useFilterConfig(
+    'tickets', filterDefs, filterValues, TICKETS_DEFAULT_VISIBILITY,
+  )
+
+  const exportParams = new URLSearchParams()
+  exportParams.set('view', view)
+  if (statusFilter === 'en_proceso') exportParams.set('statusGroup', 'en_proceso')
+  else if (statusFilter) exportParams.set('statusId', statusFilter)
+  if (priorityId)  exportParams.set('priorityId', priorityId)
+  if (agentId)     exportParams.set('agentId', agentId)
+  if (categoryId)  exportParams.set('categoryId', categoryId)
+  if (dateFrom)    exportParams.set('dateFrom', dateFrom)
+  if (dateTo)      exportParams.set('dateTo', dateTo)
+  if (slaBreached) exportParams.set('slaBreached', 'true')
+  if (debouncedSearch) exportParams.set('search', debouncedSearch)
 
   const pageTitle =
     view === 'conformidad' ? 'Conformidad'
@@ -99,7 +169,7 @@ function TicketsContent() {
         <div className="flex items-center gap-2 self-start sm:self-auto">
           {(role === 'admin' || role === 'agent') && (
             <a
-              href={`/api/tickets/export?view=${view}${statusFilter === 'en_proceso' ? '&statusGroup=en_proceso' : statusFilter ? `&statusId=${statusFilter}` : ''}${priorityId ? `&priorityId=${priorityId}` : ''}${debouncedSearch ? `&search=${encodeURIComponent(debouncedSearch)}` : ''}`}
+              href={`/api/tickets/export?${exportParams.toString()}`}
               className="btn-secondary btn-sm"
               download
             >
@@ -115,39 +185,82 @@ function TicketsContent() {
       </div>
 
       {/* Filtros */}
-      <div className="card p-4 flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1) }}
-            placeholder="Buscar por ID o asunto..."
-            className="form-input pl-9"
-          />
-        </div>
-        <select
-          value={statusFilter}
-          onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
-          className="form-select sm:w-48"
-        >
-          <option value="">Todos los estados</option>
-          <option value="en_proceso">En Proceso</option>
-          {(statuses ?? [])
-            .filter((s: any) => ![2, 3, 4].includes(s.id))
-            .map((s: any) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
+      <div className="card p-4 flex flex-col sm:flex-row flex-wrap gap-3 sm:items-center">
+        {visibility.search && (
+          <div className="relative flex-1">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1) }}
+              placeholder="Buscar por ID o asunto..."
+              className="form-input pl-9"
+            />
+          </div>
+        )}
+        {visibility.status && (
+          <select
+            value={statusFilter}
+            onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
+            className="form-select sm:w-48"
+          >
+            <option value="">Todos los estados</option>
+            <option value="en_proceso">En Proceso</option>
+            {(statuses ?? [])
+              .filter((s: any) => ![2, 3, 4].includes(s.id))
+              .map((s: any) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+          </select>
+        )}
+        {visibility.priority && (
+          <select
+            value={priorityId}
+            onChange={e => { setPriorityId(e.target.value); setPage(1) }}
+            className="form-select sm:w-48"
+          >
+            <option value="">Todas las prioridades</option>
+            {(priorities ?? []).map((p: any) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
             ))}
-        </select>
-        <select
-          value={priorityId}
-          onChange={e => { setPriorityId(e.target.value); setPage(1) }}
-          className="form-select sm:w-48"
-        >
-          <option value="">Todas las prioridades</option>
-          {(priorities ?? []).map((p: any) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
+          </select>
+        )}
+        {visibility.agentId && role !== 'client' && (
+          <select
+            value={agentId}
+            onChange={e => { setAgentId(e.target.value); setPage(1) }}
+            className="form-select sm:w-48"
+          >
+            <option value="">Todos los agentes</option>
+            {(agents ?? []).map((a: any) => (
+              <option key={a.id} value={a.id}>{a.name}</option>
+            ))}
+          </select>
+        )}
+        {visibility.categoryId && (
+          <select
+            value={categoryId}
+            onChange={e => { setCategoryId(e.target.value); setPage(1) }}
+            className="form-select sm:w-48"
+          >
+            <option value="">Todas las categorías</option>
+            {(categories ?? []).map((c: any) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        )}
+        {visibility.dateFrom && (
+          <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1) }} className="form-input sm:w-40" />
+        )}
+        {visibility.dateTo && (
+          <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1) }} className="form-input sm:w-40" />
+        )}
+        {visibility.slaBreached && (
+          <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 px-1">
+            <input type="checkbox" checked={slaBreached} onChange={e => { setSlaBreached(e.target.checked); setPage(1) }} className="h-4 w-4 accent-indigo-600 rounded" />
+            SLA incumplido
+          </label>
+        )}
+        <GearFilterButton activeFilterCount={activeFilterCount} onClick={() => setShowFilterModal(true)} />
       </div>
 
       {/* Tabla */}
@@ -280,6 +393,26 @@ function TicketsContent() {
           </>
         )}
       </div>
+
+      <FilterConfigModal
+        isOpen={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        filterDefs={filterDefs}
+        values={filterValues}
+        visibility={visibility}
+        onApply={(newValues, newVisibility) => {
+          setSearch(newValues.search as string)
+          setStatusFilter(newValues.status as string)
+          setPriorityId(newValues.priority as string)
+          setAgentId(newValues.agentId as string)
+          setCategoryId(newValues.categoryId as string)
+          setDateFrom(newValues.dateFrom as string)
+          setDateTo(newValues.dateTo as string)
+          setSlaBreached(newValues.slaBreached as boolean)
+          setVisibility(newVisibility)
+          setPage(1)
+        }}
+      />
     </div>
   )
 }

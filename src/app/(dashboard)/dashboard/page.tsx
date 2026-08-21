@@ -9,6 +9,14 @@ import {
 } from 'recharts'
 import { Loader2, Ticket, CheckCircle, Clock, AlertTriangle } from 'lucide-react'
 import { formatMinutes } from '@/lib/utils'
+import {
+  FilterConfigModal,
+  GearFilterButton,
+  type FilterDef,
+  type FilterValues,
+  type FilterVisibility,
+} from '@/components/ui/FilterConfigModal'
+import { useFilterConfig } from '@/hooks/useFilterConfig'
 
 const STATUS_COLORS: Record<string, string> = {
   abierto: '#f59e0b', en_progreso: '#6366f1', en_espera_cliente: '#0ea5e9',
@@ -16,17 +24,34 @@ const STATUS_COLORS: Record<string, string> = {
   reabierto: '#a78bfa', cancelado: '#ef4444',
 }
 
+const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const YEAR_OPTIONS = [2024, 2025, 2026]
+
+const DASHBOARD_DEFAULT_VISIBILITY: FilterVisibility = { month: true, year: true }
+
 export default function DashboardPage() {
   const { data: session } = useSession()
   const role = session?.user?.role ?? 'client'
 
   const [month, setMonth] = useState(new Date().getMonth() + 1)
   const [year, setYear]   = useState(new Date().getFullYear())
+  const [showFilterModal, setShowFilterModal] = useState(false)
 
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard', month, year],
     queryFn: () => axios.get(`/api/dashboard?month=${month}&year=${year}`).then(r => r.data),
   })
+
+  const filterDefs: FilterDef[] = [
+    { key: 'month', label: 'Mes', type: 'select', defaultValue: '', options: MONTH_NAMES.map((m, i) => ({ value: String(i + 1), label: m })) },
+    { key: 'year', label: 'Año', type: 'select', defaultValue: '', options: YEAR_OPTIONS.map(y => ({ value: String(y), label: String(y) })) },
+  ]
+
+  const filterValues: FilterValues = { month: String(month), year: String(year) }
+
+  const { visibility, setVisibility, activeFilterCount } = useFilterConfig(
+    'dashboard', filterDefs, filterValues, DASHBOARD_DEFAULT_VISIBILITY,
+  )
 
   if (isLoading) return (
     <div className="flex items-center justify-center h-64">
@@ -57,21 +82,25 @@ export default function DashboardPage() {
           <p className="text-sm text-slate-500 mt-0.5">Bienvenido, {session?.user?.name}</p>
         </div>
         <div className="flex items-center gap-2">
-          <select
-            value={month}
-            onChange={e => setMonth(Number(e.target.value))}
-            className="form-select w-auto text-sm py-1.5"
-          >
-            {['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-              .map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-          </select>
-          <select
-            value={year}
-            onChange={e => setYear(Number(e.target.value))}
-            className="form-select w-auto text-sm py-1.5"
-          >
-            {[2024, 2025, 2026].map(y => <option key={y}>{y}</option>)}
-          </select>
+          {visibility.month && (
+            <select
+              value={month}
+              onChange={e => setMonth(Number(e.target.value))}
+              className="form-select w-auto text-sm py-1.5"
+            >
+              {MONTH_NAMES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+            </select>
+          )}
+          {visibility.year && (
+            <select
+              value={year}
+              onChange={e => setYear(Number(e.target.value))}
+              className="form-select w-auto text-sm py-1.5"
+            >
+              {YEAR_OPTIONS.map(y => <option key={y}>{y}</option>)}
+            </select>
+          )}
+          <GearFilterButton activeFilterCount={activeFilterCount} onClick={() => setShowFilterModal(true)} />
         </div>
       </div>
 
@@ -235,6 +264,20 @@ export default function DashboardPage() {
           </table>
         </div>
       </div>
+
+      <FilterConfigModal
+        isOpen={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        filterDefs={filterDefs}
+        values={filterValues}
+        visibility={visibility}
+        onApply={(newValues, newVisibility) => {
+          const now = new Date()
+          setMonth(Number(newValues.month) || now.getMonth() + 1)
+          setYear(Number(newValues.year) || now.getFullYear())
+          setVisibility(newVisibility)
+        }}
+      />
     </div>
   )
 }

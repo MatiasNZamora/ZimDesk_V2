@@ -7,6 +7,14 @@ import { useSession } from 'next-auth/react'
 import { PlusCircle, Loader2, FileText, Trash2, Eye, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { Modal } from '@/components/ui/Modal'
+import {
+  FilterConfigModal,
+  GearFilterButton,
+  type FilterDef,
+  type FilterValues,
+  type FilterVisibility,
+} from '@/components/ui/FilterConfigModal'
+import { useFilterConfig } from '@/hooks/useFilterConfig'
 
 type TechnicalReport = {
   id: number
@@ -29,6 +37,26 @@ const PRIORITY_STYLES: Record<string, string> = {
   Baja:   'bg-green-100 text-green-700',
 }
 
+const STATUS_OPTIONS   = ['En análisis', 'Diagnóstico completado', 'Pendiente de aprobación', 'Reparación en curso', 'Cerrado']
+  .map(s => ({ value: s, label: s }))
+const PRIORITY_OPTIONS = Object.keys(PRIORITY_STYLES).map(p => ({ value: p, label: p }))
+const ORIGEN_OPTIONS = [
+  { value: 'recepcion',      label: 'Recepción' },
+  { value: 'ticket',         label: 'Ticket' },
+  { value: 'independiente',  label: 'Independiente' },
+]
+
+function getOrigen(r: TechnicalReport): string {
+  if (r.reception) return 'recepcion'
+  if (r.ticket) return 'ticket'
+  return 'independiente'
+}
+
+const INFORMES_DEFAULT_VISIBILITY: FilterVisibility = {
+  search: true, status: true, priority: true,
+  technicianName: false, origen: false, dateFrom: false, dateTo: false,
+}
+
 export default function InformesPage() {
   const qc = useQueryClient()
   const { data: session } = useSession()
@@ -36,6 +64,13 @@ export default function InformesPage() {
   const canDelete = role === 'admin'
 
   const [search,   setSearch]   = useState('')
+  const [status,   setStatus]   = useState('')
+  const [priority, setPriority] = useState('')
+  const [technicianName, setTechnicianName] = useState('')
+  const [origen,   setOrigen]   = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo,   setDateTo]   = useState('')
+  const [showFilterModal, setShowFilterModal] = useState(false)
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [openMenu, setOpenMenu] = useState<number | null>(null)
 
@@ -44,19 +79,51 @@ export default function InformesPage() {
     queryFn: () => axios.get('/api/informes?limit=200').then(r => r.data.data as TechnicalReport[]),
   })
 
+  const technicianOptions = useMemo(() => {
+    const set = new Set<string>()
+    for (const r of data ?? []) if (r.technicianName) set.add(r.technicianName)
+    return Array.from(set).sort().map(t => ({ value: t, label: t }))
+  }, [data])
+
+  const filterDefs = useMemo<FilterDef[]>(() => [
+    { key: 'search', label: 'Búsqueda', type: 'text', defaultValue: '' },
+    { key: 'status', label: 'Estado', type: 'select', defaultValue: '', options: STATUS_OPTIONS },
+    { key: 'priority', label: 'Prioridad', type: 'select', defaultValue: '', options: PRIORITY_OPTIONS },
+    { key: 'technicianName', label: 'Técnico', type: 'select', defaultValue: '', options: technicianOptions },
+    { key: 'origen', label: 'Origen', type: 'select', defaultValue: '', options: ORIGEN_OPTIONS },
+    { key: 'dateFrom', label: 'Fecha desde', type: 'date', defaultValue: '' },
+    { key: 'dateTo', label: 'Fecha hasta', type: 'date', defaultValue: '' },
+  ], [technicianOptions])
+
+  const filterValues: FilterValues = { search, status, priority, technicianName, origen, dateFrom, dateTo }
+
+  const { visibility, setVisibility, activeFilterCount } = useFilterConfig(
+    'informes', filterDefs, filterValues, INFORMES_DEFAULT_VISIBILITY,
+  )
+
   const filtered = useMemo(() => {
     if (!data) return []
     const q = search.toLowerCase()
-    if (!q) return data
-    return data.filter(r =>
-      r.reportNumber.toLowerCase().includes(q) ||
-      r.title.toLowerCase().includes(q) ||
-      r.technicianName.toLowerCase().includes(q) ||
-      r.clientName?.toLowerCase().includes(q) ||
-      r.reception?.estructura?.name.toLowerCase().includes(q) ||
-      r.ticket?.subject.toLowerCase().includes(q)
-    )
-  }, [data, search])
+    const from = dateFrom ? new Date(dateFrom) : null
+    const to   = dateTo ? new Date(`${dateTo}T23:59:59`) : null
+    return data.filter(r => {
+      const matchSearch = !q ||
+        r.reportNumber.toLowerCase().includes(q) ||
+        r.title.toLowerCase().includes(q) ||
+        r.technicianName.toLowerCase().includes(q) ||
+        r.clientName?.toLowerCase().includes(q) ||
+        r.reception?.estructura?.name.toLowerCase().includes(q) ||
+        r.ticket?.subject.toLowerCase().includes(q)
+      const matchStatus     = !status || r.status === status
+      const matchPriority   = !priority || r.priority === priority
+      const matchTechnician = !technicianName || r.technicianName === technicianName
+      const matchOrigen     = !origen || getOrigen(r) === origen
+      const created = new Date(r.createdAt)
+      const matchFrom = !from || created >= from
+      const matchTo   = !to || created <= to
+      return matchSearch && matchStatus && matchPriority && matchTechnician && matchOrigen && matchFrom && matchTo
+    })
+  }, [data, search, status, priority, technicianName, origen, dateFrom, dateTo])
 
   const remove = useMutation({
     mutationFn: (id: number) => axios.delete(`/api/informes/${id}`),
@@ -88,13 +155,46 @@ export default function InformesPage() {
         </Link>
       </div>
 
-      <div className="flex gap-3">
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Buscar por número, título, cliente, técnico..."
-          className="form-input flex-1"
-        />
+      <div className="flex gap-3 flex-wrap items-center">
+        {visibility.search && (
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar por número, título, cliente, técnico..."
+            className="form-input flex-1 min-w-48"
+          />
+        )}
+        {visibility.status && (
+          <select value={status} onChange={e => setStatus(e.target.value)} className="form-select w-48">
+            <option value="">Todos los estados</option>
+            {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+        )}
+        {visibility.priority && (
+          <select value={priority} onChange={e => setPriority(e.target.value)} className="form-select w-40">
+            <option value="">Todas las prioridades</option>
+            {PRIORITY_OPTIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+          </select>
+        )}
+        {visibility.technicianName && (
+          <select value={technicianName} onChange={e => setTechnicianName(e.target.value)} className="form-select w-48">
+            <option value="">Todos los técnicos</option>
+            {technicianOptions.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </select>
+        )}
+        {visibility.origen && (
+          <select value={origen} onChange={e => setOrigen(e.target.value)} className="form-select w-44">
+            <option value="">Todos los orígenes</option>
+            {ORIGEN_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        )}
+        {visibility.dateFrom && (
+          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="form-input w-40" />
+        )}
+        {visibility.dateTo && (
+          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="form-input w-40" />
+        )}
+        <GearFilterButton activeFilterCount={activeFilterCount} onClick={() => setShowFilterModal(true)} />
       </div>
 
       <div className="card overflow-hidden">
@@ -195,6 +295,24 @@ export default function InformesPage() {
           </button>
         </div>
       </Modal>
+
+      <FilterConfigModal
+        isOpen={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        filterDefs={filterDefs}
+        values={filterValues}
+        visibility={visibility}
+        onApply={(newValues, newVisibility) => {
+          setSearch(newValues.search as string)
+          setStatus(newValues.status as string)
+          setPriority(newValues.priority as string)
+          setTechnicianName(newValues.technicianName as string)
+          setOrigen(newValues.origen as string)
+          setDateFrom(newValues.dateFrom as string)
+          setDateTo(newValues.dateTo as string)
+          setVisibility(newVisibility)
+        }}
+      />
     </div>
   )
 }
