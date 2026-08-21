@@ -4,6 +4,12 @@ import { Providers } from './providers'
 import { Toaster } from 'sonner'
 import { prisma } from '@/lib/prisma'
 
+// Sin esto, Next pre-renderiza las páginas estáticas (ej. /login) durante
+// `next build` — en esa etapa del Dockerfile no hay DB conectada, así que
+// getAppConfig() cae al catch y el favicon/nombre queda vacío para siempre
+// en el HTML estático, sin importar lo que se configure luego en Settings.
+export const dynamic = 'force-dynamic'
+
 async function getAppConfig() {
   try {
     const rows = await prisma.appConfig.findMany({ where: { key: { in: ['app_name', 'favicon_url'] } } })
