@@ -1,7 +1,8 @@
 'use client'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
-import { useState } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { PlusCircle, Pencil, Trash2, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
@@ -11,21 +12,37 @@ import { toast } from 'sonner'
 
 type PlatformNorm = { id: number; title: string; content: string }
 
-export default function PlatformNormsPage() {
+function PlatformNormsContent() {
   const { data: session } = useSession()
   const isAdmin = session?.user?.role === 'admin'
   const qc = useQueryClient()
+  const searchParams = useSearchParams()
+  const openParam = searchParams.get('open')
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<PlatformNorm | null>(null)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [deleteId, setDeleteId] = useState<number | null>(null)
-  const [openIdx, setOpenIdx] = useState<number | null>(0)
+  // Id de la norma abierta (no índice): permite deep-linkear una norma puntual
+  // desde una mención "@" en tickets/chat vía /platform-norms?open=<id>.
+  const [openId, setOpenId] = useState<number | null>(openParam ? Number(openParam) : null)
+  const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map())
 
   const { data, isLoading } = useQuery({
     queryKey: ['platform-norms'],
     queryFn: () => axios.get('/api/platform-norms').then(r => r.data as PlatformNorm[]),
   })
+
+  useEffect(() => {
+    if (!data || data.length === 0) return
+    if (openParam) {
+      setOpenId(Number(openParam))
+      cardRefs.current.get(Number(openParam))?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    } else if (openId === null) {
+      setOpenId(data[0].id)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, openParam])
 
   const save = useMutation({
     mutationFn: () => editing
@@ -67,16 +84,20 @@ export default function PlatformNormsPage() {
           {(data ?? []).length === 0 && (
             <div className="card p-8 text-center text-slate-400">No hay normas configuradas todavía.</div>
           )}
-          {(data ?? []).map((norm, idx) => (
-            <div key={norm.id} className="card overflow-hidden">
+          {(data ?? []).map(norm => (
+            <div
+              key={norm.id}
+              ref={el => { if (el) cardRefs.current.set(norm.id, el); else cardRefs.current.delete(norm.id) }}
+              className="card overflow-hidden scroll-mt-4"
+            >
               <button
-                onClick={() => setOpenIdx(openIdx === idx ? null : idx)}
+                onClick={() => setOpenId(openId === norm.id ? null : norm.id)}
                 className="w-full flex items-center justify-between p-5 text-left hover:bg-slate-50 transition-colors"
               >
                 <span className="font-medium text-slate-800 pr-4">{norm.title}</span>
-                {openIdx === idx ? <ChevronUp size={18} className="text-slate-400 shrink-0" /> : <ChevronDown size={18} className="text-slate-400 shrink-0" />}
+                {openId === norm.id ? <ChevronUp size={18} className="text-slate-400 shrink-0" /> : <ChevronDown size={18} className="text-slate-400 shrink-0" />}
               </button>
-              {openIdx === idx && (
+              {openId === norm.id && (
                 <div className="px-5 pb-5 border-t border-slate-100 pt-4">
                   <RichTextDisplay content={norm.content} />
                   {isAdmin && (
@@ -129,5 +150,13 @@ export default function PlatformNormsPage() {
         </div>
       </Modal>
     </div>
+  )
+}
+
+export default function PlatformNormsPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center py-12"><Loader2 className="animate-spin text-indigo-600" size={28} /></div>}>
+      <PlatformNormsContent />
+    </Suspense>
   )
 }

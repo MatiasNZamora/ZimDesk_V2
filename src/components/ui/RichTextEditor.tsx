@@ -1,9 +1,11 @@
 'use client'
+import { useEffect } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import { Bold, Italic, List, ListOrdered, Quote, Code } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { NormMention } from '@/components/ui/normMentionExtension'
 
 interface Props {
   value?: string
@@ -20,6 +22,7 @@ export function RichTextEditor({ value, onChange, placeholder = 'Escribí aquí.
     extensions: [
       StarterKit,
       Placeholder.configure({ placeholder }),
+      NormMention,
     ],
     content: value ?? '',
     onUpdate: ({ editor }) => {
@@ -33,6 +36,17 @@ export function RichTextEditor({ value, onChange, placeholder = 'Escribí aquí.
       },
     },
   })
+
+  // El editor sólo lee `value` al montarse; si el padre lo resetea externamente
+  // (ej: limpiar el composer después de enviar una respuesta), hay que
+  // resincronizarlo. Comparamos contra el HTML actual para no pisar al usuario
+  // mientras escribe (onUpdate ya deja value === editor.getHTML() en ese caso).
+  useEffect(() => {
+    if (!editor) return
+    const current = editor.isEmpty ? '' : editor.getHTML()
+    if ((value ?? '') !== current) editor.commands.setContent(value ?? '', { emitUpdate: false })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, editor])
 
   if (!editor) return null
 

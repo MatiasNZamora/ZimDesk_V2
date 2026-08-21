@@ -1,6 +1,9 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { useQuery } from '@tanstack/react-query'
+import axios from 'axios'
+import Link from 'next/link'
 import {
   MessageSquare, X, ArrowLeft, Send, Plus, Search,
   Check, CheckCheck, Paperclip, Users, Image as ImageIcon,
@@ -12,8 +15,31 @@ import {
   useRespondRequest, useStartChat, useSearchUsers,
   ChatConversation, ChatMessage,
 } from '@/hooks/useChat'
+import { buildMentionToken, parseMentionText, stripMentionTokens } from '@/lib/normMentionToken'
 
 type View = 'list' | 'conversation' | 'new-chat'
+type NormItem = { id: number; title: string }
+
+function MessageText({ content }: { content: string }) {
+  return (
+    <p className="whitespace-pre-wrap">
+      {parseMentionText(content).map((part, i) =>
+        typeof part === 'string' ? (
+          <span key={i}>{part}</span>
+        ) : (
+          <Link
+            key={i}
+            href={`/platform-norms?open=${part.id}`}
+            target="_blank"
+            className="font-medium underline decoration-dotted underline-offset-2 hover:opacity-80"
+          >
+            @{part.label}
+          </Link>
+        )
+      )}
+    </p>
+  )
+}
 
 function Avatar({ name, src, size = 9 }: { name: string; src?: string | null; size?: number }) {
   const cls = `w-${size} h-${size} rounded-full shrink-0 overflow-hidden flex items-center justify-center bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 font-semibold text-sm`
@@ -140,7 +166,7 @@ function ConversationList({ onSelect, onNewChat }: { onSelect: (id: number) => v
                     {isPending
                       ? <span className="text-indigo-500 font-medium">Solicitud pendiente</span>
                       : lastMsg
-                        ? (lastMsg.content ?? `📎 ${lastMsg.attachments[0]?.fileName ?? 'Archivo'}`)
+                        ? (lastMsg.content ? stripMentionTokens(lastMsg.content) : `📎 ${lastMsg.attachments[0]?.fileName ?? 'Archivo'}`)
                         : 'Sin mensajes'}
                   </span>
                   {conv.unreadCount > 0 && (
@@ -259,6 +285,25 @@ function ConversationView({ convId, onBack }: { convId: number; onBack: () => vo
   const [files, setFiles] = useState<File[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Menciones "@norma": detecta el patrón "@consulta" antes del cursor y ofrece
+  // un autocompletado; al elegir una norma se inserta el token de texto plano
+  // "@[Título](norma:id)", que MessageText resuelve a link al renderizar.
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null)
+  const [mentionStart, setMentionStart] = useState<number | null>(null)
+  const [mentionIndex, setMentionIndex] = useState(0)
+  const { data: norms = [] } = useQuery({
+    queryKey: ['platform-norms'],
+    queryFn: () => axios.get('/api/platform-norms').then(r => r.data as NormItem[]),
+    enabled: mentionQuery !== null,
+    staleTime: 60_000,
+  })
+  const filteredNorms = mentionQuery === null
+    ? []
+    : norms.filter(n => n.title.toLowerCase().includes(mentionQuery.toLowerCase())).slice(0, 6)
+
+  useEffect(() => setMentionIndex(0), [mentionQuery])
 
   const { data: conversations = [] } = useChatConversations()
   const conv = conversations.find(c => c.id === convId)
@@ -294,9 +339,42 @@ function ConversationView({ convId, onBack }: { convId: number; onBack: () => vo
     await sendMsg.mutateAsync({ content: input, files })
     setInput('')
     setFiles([])
+    setMentionQuery(null)
   }
 
-  function handleKey(e: React.KeyboardEvent) {
+  function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const value = e.target.value
+    setInput(value)
+    const cursor = e.target.selectionStart
+    const textBeforeCursor = value.slice(0, cursor)
+    const match = textBeforeCursor.match(/(?:^|\s)@([^\s@]*)$/)
+    if (match) {
+      setMentionQuery(match[1])
+      setMentionStart(cursor - match[1].length - 1)
+    } else {
+      setMentionQuery(null)
+      setMentionStart(null)
+    }
+  }
+
+  function insertMention(norm: NormItem) {
+    if (mentionStart === null || mentionQuery === null) return
+    const token = buildMentionToken(norm)
+    const before = input.slice(0, mentionStart)
+    const after = input.slice(mentionStart + 1 + mentionQuery.length)
+    setInput(`${before}${token} ${after}`)
+    setMentionQuery(null)
+    setMentionStart(null)
+    textareaRef.current?.focus()
+  }
+
+  function handleKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (mentionQuery !== null && filteredNorms.length > 0) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIndex(i => (i + 1) % filteredNorms.length); return }
+      if (e.key === 'ArrowUp') { e.preventDefault(); setMentionIndex(i => (i - 1 + filteredNorms.length) % filteredNorms.length); return }
+      if (e.key === 'Enter') { e.preventDefault(); insertMention(filteredNorms[mentionIndex]); return }
+      if (e.key === 'Escape') { setMentionQuery(null); return }
+    }
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
   }
 
@@ -373,7 +451,7 @@ function ConversationView({ convId, onBack }: { convId: number; onBack: () => vo
                 {msg.replyTo && !deleted && (
                   <div className={cn('text-[10px] px-2 py-1 rounded-t-lg mb-0 opacity-70 max-w-full truncate',
                     isMe ? 'bg-indigo-400 text-white' : 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300')}>
-                    ↩ {msg.replyTo.content ?? '📎 Archivo'}
+                    ↩ {msg.replyTo.content ? stripMentionTokens(msg.replyTo.content) : '📎 Archivo'}
                   </div>
                 )}
                 <div className={cn('px-3 py-2 rounded-2xl text-sm break-words',
@@ -382,7 +460,7 @@ function ConversationView({ convId, onBack }: { convId: number; onBack: () => vo
                   {deleted
                     ? <span className="italic opacity-60 text-xs">Mensaje eliminado</span>
                     : <>
-                        {msg.content && <p className="whitespace-pre-wrap">{msg.content}</p>}
+                        {msg.content && <MessageText content={msg.content} />}
                         {msg.attachments.map(a => <FileAttachment key={a.id} att={a} />)}
                       </>}
                 </div>
@@ -423,18 +501,34 @@ function ConversationView({ convId, onBack }: { convId: number; onBack: () => vo
       )}
 
       {/* Input */}
-      <div className="px-3 py-2 border-t border-slate-100 dark:border-slate-700 flex items-end gap-2 shrink-0">
+      <div className="relative px-3 py-2 border-t border-slate-100 dark:border-slate-700 flex items-end gap-2 shrink-0">
+        {mentionQuery !== null && filteredNorms.length > 0 && (
+          <div className="absolute left-3 right-3 bottom-full mb-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg py-1 max-h-40 overflow-y-auto z-10">
+            {filteredNorms.map((norm, i) => (
+              <button
+                key={norm.id}
+                type="button"
+                onClick={() => insertMention(norm)}
+                className={cn('w-full flex items-center gap-2 text-left px-3 py-1.5 text-xs truncate transition-colors',
+                  i === mentionIndex ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600')}>
+                <FileText size={12} className="shrink-0 text-slate-400" />
+                <span className="truncate">{norm.title}</span>
+              </button>
+            ))}
+          </div>
+        )}
         <button onClick={() => fileInputRef.current?.click()}
           className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors shrink-0">
           <Paperclip size={16} />
         </button>
         <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFiles} />
         <textarea
+          ref={textareaRef}
           value={input}
-          onChange={e => setInput(e.target.value)}
+          onChange={handleInputChange}
           onKeyDown={handleKey}
           disabled={isPending}
-          placeholder={isPending ? 'Aceptá la solicitud para chatear' : 'Mensaje...'}
+          placeholder={isPending ? 'Aceptá la solicitud para chatear' : 'Mensaje... (@ para mencionar una norma)'}
           rows={1}
           className="flex-1 resize-none text-sm bg-slate-100 dark:bg-slate-700 rounded-xl px-3 py-2 border-0 outline-none text-slate-800 dark:text-slate-200 placeholder-slate-400 max-h-24 overflow-y-auto disabled:opacity-50"
           style={{ lineHeight: '1.4' }}
